@@ -11,21 +11,17 @@ canvas { display:block; }
     position:fixed; top:20px; left:20px;
     pointer-events:none; z-index:10;
 }
-.ui-label { color:#bbb; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+.lbl { color:#bbb; font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
 #hbar-bg {
     width:240px; height:22px;
     background:rgba(0,0,0,0.55); border:2px solid rgba(255,255,255,0.25);
     border-radius:11px; overflow:hidden;
 }
-#hbar {
-    height:100%; width:100%;
-    background:linear-gradient(90deg,#e63946,#f4a261);
-    border-radius:11px; transition:width 0.12s;
-}
-#health-text { color:#fff; font-size:13px; margin-top:3px; text-shadow:1px 1px 3px #000; }
-#score-text  { color:#ffd700; font-size:17px; font-weight:bold; margin-top:10px; text-shadow:1px 1px 4px #000; }
-#kills-text  { color:#a8dadc; font-size:13px; margin-top:3px; text-shadow:1px 1px 2px #000; }
-#wave-text   { color:#ff9966; font-size:12px; margin-top:2px; }
+#hbar { height:100%; width:100%; border-radius:11px; transition:width 0.12s; }
+#hp-txt  { color:#fff; font-size:13px; margin-top:3px; text-shadow:1px 1px 3px #000; }
+#sc-txt  { color:#ffd700; font-size:17px; font-weight:bold; margin-top:10px; text-shadow:1px 1px 4px #000; }
+#kl-txt  { color:#a8dadc; font-size:13px; margin-top:3px; text-shadow:1px 1px 2px #000; }
+#en-txt  { color:#ff9966; font-size:12px; margin-top:2px; }
 #controls {
     position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
     color:rgba(255,255,255,0.4); font-size:12px; text-align:center;
@@ -37,34 +33,26 @@ canvas { display:block; }
     flex-direction:column; align-items:center; justify-content:center;
     z-index:100;
 }
-#gameover h1  { color:#e63946; font-size:68px; text-shadow:0 0 40px #e63946aa; margin-bottom:8px; }
-#go-info      { color:#fff; font-size:22px; margin-bottom:28px; }
-#gameover btn { /* not used */ }
+#gameover h1   { color:#e63946; font-size:68px; text-shadow:0 0 40px #e63946aa; margin-bottom:8px; }
+#go-info       { color:#fff; font-size:22px; margin-bottom:28px; }
 #restart-btn {
     padding:14px 44px; font-size:18px; font-family:Arial;
     background:linear-gradient(135deg,#e63946,#c1121f);
     color:#fff; border:none; border-radius:8px; cursor:pointer;
-    box-shadow:0 4px 20px rgba(230,57,70,0.5);
-    transition:transform 0.1s;
 }
-#restart-btn:hover { transform:scale(1.06); }
+#restart-btn:hover { filter:brightness(1.15); }
 </style>
 </head>
 <body>
-
 <div id="ui">
-    <div class="ui-label">Gesundheit</div>
+    <div class="lbl">Gesundheit</div>
     <div id="hbar-bg"><div id="hbar"></div></div>
-    <div id="health-text">100 / 100</div>
-    <div id="score-text">★ Score: 0</div>
-    <div id="kills-text">☠ Kills: 0</div>
-    <div id="wave-text">Feinde: 0</div>
+    <div id="hp-txt">100 / 100</div>
+    <div id="sc-txt">★ Score: 0</div>
+    <div id="kl-txt">☠ Kills: 0</div>
+    <div id="en-txt">Feinde: 0</div>
 </div>
-
-<div id="controls">
-    W / ↑ Gas &nbsp;·&nbsp; S / ↓ Bremse/Rückwärts &nbsp;·&nbsp; A / ← D / → Lenken &nbsp;·&nbsp; LEERTASTE Handbremse
-</div>
-
+<div id="controls">W/↑ Gas &nbsp;·&nbsp; S/↓ Bremse &nbsp;·&nbsp; A/D Lenken &nbsp;·&nbsp; LEERTASTE Handbremse</div>
 <div id="gameover">
     <h1>GAME OVER</h1>
     <div id="go-info"></div>
@@ -75,17 +63,17 @@ canvas { display:block; }
 <script>
 'use strict';
 
-// ══════════════════════════════════════════════════════
-//  SCENE
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  RENDERER + SCENE
+// ═══════════════════════════════════════════════════
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0d0520);
 scene.fog = new THREE.FogExp2(0x1a0828, 0.022);
 
-const camera = new THREE.PerspectiveCamera(68, innerWidth/innerHeight, 0.1, 300);
+const camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.1, 300);
 camera.position.set(0, 9, -15);
 
-const renderer = new THREE.WebGLRenderer({ antialias:true });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -95,81 +83,75 @@ renderer.toneMappingExposure = 0.85;
 document.body.appendChild(renderer.domElement);
 
 window.addEventListener('resize', () => {
-    camera.aspect = innerWidth/innerHeight;
+    camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
 });
 
-// ══════════════════════════════════════════════════════
-//  EVENING LIGHTING
-// ══════════════════════════════════════════════════════
-// Ambient – deep violet dusk
+// ═══════════════════════════════════════════════════
+//  LIGHTING  – Abend
+// ═══════════════════════════════════════════════════
 scene.add(new THREE.AmbientLight(0x301844, 0.55));
 
-// Low sun on horizon – warm orange
 const sun = new THREE.DirectionalLight(0xff6820, 1.3);
 sun.position.set(-22, 7, -18);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.near = 0.5;
 sun.shadow.camera.far  = 90;
-sun.shadow.camera.left = sun.shadow.camera.bottom = -28;
-sun.shadow.camera.right = sun.shadow.camera.top  =  28;
+sun.shadow.camera.left = sun.shadow.camera.bottom = -30;
+sun.shadow.camera.right = sun.shadow.camera.top   =  30;
 scene.add(sun);
 
-// Cool moonrise from opposite side
 const moon = new THREE.DirectionalLight(0x3060c8, 0.45);
 moon.position.set(18, 28, 14);
 scene.add(moon);
 
-// Hemisphere – warm sky / dark ground
 scene.add(new THREE.HemisphereLight(0xff4010, 0x180c28, 0.5));
 
-// ══════════════════════════════════════════════════════
-//  SKY DOME
-// ══════════════════════════════════════════════════════
-(function buildSky() {
-    const geo = new THREE.SphereGeometry(140, 32, 16);
-    const mat = new THREE.ShaderMaterial({
-        side: THREE.BackSide,
-        uniforms: {},
-        vertexShader: `
-            varying vec3 vPos;
-            void main() { vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
-        `,
-        fragmentShader: `
-            varying vec3 vPos;
-            void main() {
-                float h = clamp(vPos.y / 140.0, 0.0, 1.0);
-                vec3 horizon = vec3(0.72, 0.22, 0.05);
-                vec3 zenith  = vec3(0.04, 0.01, 0.12);
-                vec3 c = mix(horizon, zenith, pow(h, 0.55));
-                gl_FragColor = vec4(c, 1.0);
-            }
-        `
-    });
-    scene.add(new THREE.Mesh(geo, mat));
+// ═══════════════════════════════════════════════════
+//  HIMMEL (Shader-Gradient + Sterne)
+// ═══════════════════════════════════════════════════
+(function () {
+    const sky = new THREE.Mesh(
+        new THREE.SphereGeometry(140, 32, 16),
+        new THREE.ShaderMaterial({
+            side: THREE.BackSide,
+            vertexShader: `
+                varying vec3 vPos;
+                void main() { vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }
+            `,
+            fragmentShader: `
+                varying vec3 vPos;
+                void main() {
+                    float h = clamp(vPos.y / 140.0, 0.0, 1.0);
+                    vec3 col = mix(vec3(0.72,0.22,0.05), vec3(0.04,0.01,0.12), pow(h,0.55));
+                    gl_FragColor = vec4(col, 1.0);
+                }
+            `
+        })
+    );
+    scene.add(sky);
 
-    // Stars
-    const starGeo = new THREE.BufferGeometry();
-    const starPos = [];
+    const sp = [];
     for (let i = 0; i < 600; i++) {
-        const theta = Math.random() * Math.PI * 2;
         const phi   = Math.acos(2 * Math.random() - 1);
-        const r     = 130;
-        starPos.push(
+        const theta = Math.random() * Math.PI * 2;
+        const r     = 128;
+        sp.push(
             r * Math.sin(phi) * Math.cos(theta),
-            Math.abs(r * Math.cos(phi)) + 10,
+            Math.abs(r * Math.cos(phi)) + 8,
             r * Math.sin(phi) * Math.sin(theta)
         );
     }
-    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.5, transparent:true, opacity:0.7 })));
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
+    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.45, transparent: true, opacity: 0.7 })));
 })();
 
-// ══════════════════════════════════════════════════════
-//  GROUND
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  BODEN
+// ═══════════════════════════════════════════════════
 const MAP  = 45;
 const HALF = MAP / 2;
 
@@ -177,79 +159,74 @@ const gGeo = new THREE.PlaneGeometry(MAP, MAP, 60, 60);
 const gPos = gGeo.attributes.position;
 for (let i = 0; i < gPos.count; i++) {
     const x = gPos.getX(i), z = gPos.getY(i);
-    if (Math.sqrt(x*x + z*z) > 4)
-        gPos.setZ(i, Math.sin(x*0.45)*Math.cos(z*0.38)*0.35 + (Math.random()-0.5)*0.15);
+    if (Math.sqrt(x * x + z * z) > 4)
+        gPos.setZ(i, Math.sin(x * 0.45) * Math.cos(z * 0.38) * 0.35 + (Math.random() - 0.5) * 0.15);
 }
 gGeo.computeVertexNormals();
-const ground = new THREE.Mesh(gGeo, new THREE.MeshLambertMaterial({ color:0x1b2d0e }));
-ground.rotation.x = -Math.PI/2;
+const ground = new THREE.Mesh(gGeo, new THREE.MeshLambertMaterial({ color: 0x1b2d0e }));
+ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Dirt patches
 for (let i = 0; i < 18; i++) {
-    const p = new THREE.Mesh(
-        new THREE.CircleGeometry(0.8 + Math.random()*1.2, 8),
-        new THREE.MeshLambertMaterial({ color:0x2a1a0a })
+    const patch = new THREE.Mesh(
+        new THREE.CircleGeometry(0.8 + Math.random() * 1.2, 8),
+        new THREE.MeshLambertMaterial({ color: 0x2a1a0a })
     );
-    p.rotation.x = -Math.PI/2;
-    p.position.set((Math.random()-0.5)*MAP*0.9, 0.01, (Math.random()-0.5)*MAP*0.9);
-    scene.add(p);
+    patch.rotation.x = -Math.PI / 2;
+    patch.position.set((Math.random() - 0.5) * MAP * 0.9, 0.01, (Math.random() - 0.5) * MAP * 0.9);
+    scene.add(patch);
 }
 
-// ══════════════════════════════════════════════════════
-//  ROCKS
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  FELSEN
+// ═══════════════════════════════════════════════════
 for (let i = 0; i < 14; i++) {
-    const s = 0.3 + Math.random()*0.7;
+    const s = 0.3 + Math.random() * 0.7;
     const rock = new THREE.Mesh(
         new THREE.DodecahedronGeometry(s, 0),
-        new THREE.MeshPhongMaterial({ color:0x444455, shininess:20 })
+        new THREE.MeshPhongMaterial({ color: 0x444455, shininess: 20 })
     );
     let rx, rz;
-    do { rx=(Math.random()-0.5)*MAP*0.9; rz=(Math.random()-0.5)*MAP*0.9; }
-    while (Math.sqrt(rx*rx+rz*rz) < 5);
-    rock.position.set(rx, s*0.4, rz);
-    rock.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
-    rock.castShadow = true; rock.receiveShadow = true;
+    do { rx = (Math.random() - 0.5) * MAP * 0.9; rz = (Math.random() - 0.5) * MAP * 0.9; }
+    while (Math.sqrt(rx * rx + rz * rz) < 5);
+    rock.position.set(rx, s * 0.4, rz);
+    rock.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
     scene.add(rock);
 }
 
-// ══════════════════════════════════════════════════════
-//  PINE TREES
-// ══════════════════════════════════════════════════════
-const TRUNK_MAT  = new THREE.MeshLambertMaterial({ color:0x3a1e0a });
-const PINE_MATS  = [
-    new THREE.MeshLambertMaterial({ color:0x0c3d14 }),
-    new THREE.MeshLambertMaterial({ color:0x0a2e10 }),
-    new THREE.MeshLambertMaterial({ color:0x0e4f1a }),
+// ═══════════════════════════════════════════════════
+//  KIEFERN
+// ═══════════════════════════════════════════════════
+const TRUNK_M = new THREE.MeshLambertMaterial({ color: 0x3a1e0a });
+const PINE_M  = [
+    new THREE.MeshLambertMaterial({ color: 0x0c3d14 }),
+    new THREE.MeshLambertMaterial({ color: 0x0a2e10 }),
+    new THREE.MeshLambertMaterial({ color: 0x0e4f1a }),
 ];
 const trees = [];
 
 function makePine(x, z, sc) {
     const g = new THREE.Group();
     g.position.set(x, 0, z);
-
-    const th = (1.8 + Math.random()*1.2) * sc;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14*sc, 0.26*sc, th, 7), TRUNK_MAT);
-    trunk.position.y = th/2;
+    const th = (1.8 + Math.random() * 1.2) * sc;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14 * sc, 0.26 * sc, th, 7), TRUNK_M);
+    trunk.position.y = th / 2;
     trunk.castShadow = true;
     g.add(trunk);
-
-    const layers = 3;
-    for (let i = 0; i < layers; i++) {
-        const ch = (4.0 - i*0.6) * sc;
-        const cr = (2.0 - i*0.3) * sc;
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(cr, ch, 8), PINE_MATS[i]);
-        cone.position.y = th + i*1.6*sc + ch/2 - 0.5*sc;
+    for (let i = 0; i < 3; i++) {
+        const ch = (4.0 - i * 0.6) * sc;
+        const cr = (2.0 - i * 0.3) * sc;
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(cr, ch, 8), PINE_M[i]);
+        cone.position.y = th + i * 1.6 * sc + ch / 2 - 0.5 * sc;
         cone.castShadow = true;
         g.add(cone);
     }
-
     g.userData = {
-        broken: false,
-        fallAngle: 0,
-        fallDir: new THREE.Vector3((Math.random()-0.5), 0, (Math.random()-0.5)).normalize(),
+        broken: false, fallAngle: 0,
+        fallDir: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
         col: 0.5 * sc,
     };
     scene.add(g);
@@ -258,511 +235,423 @@ function makePine(x, z, sc) {
 
 for (let i = 0; i < 65; i++) {
     let x, z;
-    do { x=(Math.random()-0.5)*(MAP-4); z=(Math.random()-0.5)*(MAP-4); }
-    while (Math.sqrt(x*x+z*z) < 7);
-    makePine(x, z, 0.75 + Math.random()*0.65);
+    do { x = (Math.random() - 0.5) * (MAP - 4); z = (Math.random() - 0.5) * (MAP - 4); }
+    while (Math.sqrt(x * x + z * z) < 7);
+    makePine(x, z, 0.75 + Math.random() * 0.65);
 }
 
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 //  MONSTER TRUCK
-// ══════════════════════════════════════════════════════
-const CAR_BODY_MAT  = new THREE.MeshPhongMaterial({ color:0x1c3d72, shininess:90 });
-const CAR_CABIN_MAT = new THREE.MeshPhongMaterial({ color:0x112550, shininess:60 });
-const WHEEL_MAT     = new THREE.MeshPhongMaterial({ color:0x111111, shininess:30 });
-const RIM_MAT       = new THREE.MeshPhongMaterial({ color:0x999999, shininess:130 });
-const CHROME_MAT    = new THREE.MeshPhongMaterial({ color:0xaaaaaa, shininess:200 });
+// ═══════════════════════════════════════════════════
+const CAR_BODY_MAT  = new THREE.MeshPhongMaterial({ color: 0x1c3d72, shininess: 90 });
+const CAR_CABIN_MAT = new THREE.MeshPhongMaterial({ color: 0x112550, shininess: 60 });
+const WHEEL_MAT     = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 30 });
+const RIM_MAT       = new THREE.MeshPhongMaterial({ color: 0x999999, shininess: 130 });
+const CHROME_MAT    = new THREE.MeshPhongMaterial({ color: 0xaaaaaa, shininess: 200 });
 
-function buildMonsterTruck() {
+function buildTruck() {
     const root = new THREE.Group();
 
+    function box(w, h, d, mat, px, py, pz) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(px, py, pz);
+        m.castShadow = true;
+        root.add(m);
+        return m;
+    }
+
     // Chassis
-    const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.45, 4.6),
-        new THREE.MeshPhongMaterial({ color:0x222222, shininess:40 }));
-    chassis.position.y = 1.8;
-    chassis.castShadow = true;
-    root.add(chassis);
-
+    box(2.7, 0.45, 4.6, new THREE.MeshPhongMaterial({ color: 0x222222 }), 0, 1.8, 0);
     // Body
-    const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.85, 4.3), CAR_BODY_MAT);
-    body.position.y = 2.15;
-    body.castShadow = true;
-    root.add(body);
-
-    // Hood slope front
+    box(2.6, 0.85, 4.3, CAR_BODY_MAT, 0, 2.15, 0);
+    // Hood
     const hood = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.55, 1.2), CAR_BODY_MAT);
-    hood.position.set(0, 2.42, -1.85);
-    hood.rotation.x = -0.18;
-    hood.castShadow = true;
-    root.add(hood);
-
+    hood.position.set(0, 2.42, -1.85); hood.rotation.x = -0.18; hood.castShadow = true; root.add(hood);
     // Cabin
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.05, 2.3), CAR_CABIN_MAT);
-    cabin.position.set(0, 3.08, 0.25);
-    cabin.castShadow = true;
-    root.add(cabin);
-
+    box(2.1, 1.05, 2.3, CAR_CABIN_MAT, 0, 3.08, 0.25);
     // Windshield
-    root.add(Object.assign(
-        new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.58, 0.06),
-            new THREE.MeshPhongMaterial({ color:0x223355, transparent:true, opacity:0.65, shininess:200 })),
-        { position: new THREE.Vector3(0, 3.15, -0.87) }
-    ));
-
+    const ws = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.58, 0.06),
+        new THREE.MeshPhongMaterial({ color: 0x223355, transparent: true, opacity: 0.65, shininess: 200 }));
+    ws.position.set(0, 3.15, -0.87); root.add(ws);
     // Rear window
-    root.add(Object.assign(
-        new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.52, 0.06),
-            new THREE.MeshPhongMaterial({ color:0x223355, transparent:true, opacity:0.65 })),
-        { position: new THREE.Vector3(0, 3.1, 1.41) }
-    ));
-
+    const rw = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.52, 0.06),
+        new THREE.MeshPhongMaterial({ color: 0x223355, transparent: true, opacity: 0.65 }));
+    rw.position.set(0, 3.1, 1.41); root.add(rw);
     // Side windows
     [-1.056, 1.056].forEach(x => {
         const sw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.52, 1.2),
-            new THREE.MeshPhongMaterial({ color:0x223355, transparent:true, opacity:0.6 }));
-        sw.position.set(x, 3.1, 0.25);
-        root.add(sw);
+            new THREE.MeshPhongMaterial({ color: 0x223355, transparent: true, opacity: 0.6 }));
+        sw.position.set(x, 3.1, 0.25); root.add(sw);
     });
-
-    // Front bumper / grill
-    const bumper = new THREE.Mesh(new THREE.BoxGeometry(2.72, 0.38, 0.28), CHROME_MAT);
-    bumper.position.set(0, 1.68, -2.47);
-    root.add(bumper);
-
-    const grill = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.12),
-        new THREE.MeshPhongMaterial({ color:0x333333, shininess:40 }));
-    grill.position.set(0, 2.05, -2.46);
-    root.add(grill);
-
+    // Bumper + grill
+    box(2.72, 0.38, 0.28, CHROME_MAT, 0, 1.68, -2.47);
+    box(1.8, 0.55, 0.12, new THREE.MeshPhongMaterial({ color: 0x333333 }), 0, 2.05, -2.46);
     // Headlights
-    const hlMat = new THREE.MeshPhongMaterial({ color:0xffffcc, emissive:0xffee88, shininess:300 });
+    const hlMat = new THREE.MeshPhongMaterial({ color: 0xffffcc, emissive: 0xffee88, shininess: 300 });
     [-0.72, 0.72].forEach(x => {
         const hl = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.1), hlMat);
-        hl.position.set(x, 1.9, -2.47);
-        root.add(hl);
+        hl.position.set(x, 1.9, -2.47); root.add(hl);
         const ptl = new THREE.PointLight(0xffeeaa, 2, 14);
-        ptl.position.set(x, 1.85, -3.2);
-        root.add(ptl);
+        ptl.position.set(x, 1.85, -3.2); root.add(ptl);
     });
-
     // Tail lights
-    const tlMat = new THREE.MeshPhongMaterial({ color:0xff1111, emissive:0xcc0000 });
+    const tlMat = new THREE.MeshPhongMaterial({ color: 0xff1111, emissive: 0xcc0000 });
     [-0.72, 0.72].forEach(x => {
         const tl = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.22, 0.08), tlMat);
-        tl.position.set(x, 2.1, 2.46);
-        root.add(tl);
+        tl.position.set(x, 2.1, 2.46); root.add(tl);
     });
-
-    // Exhaust pipes
+    // Exhaust
     [-0.7, 0.7].forEach(x => {
         const ex = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.2, 8), CHROME_MAT);
-        ex.position.set(x*1.5, 2.9, -0.6);
-        ex.rotation.x = -0.2;
-        root.add(ex);
+        ex.position.set(x * 1.5, 2.9, -0.6); ex.rotation.x = -0.2; root.add(ex);
     });
+    // Roof bar
+    box(1.8, 0.12, 0.12, CHROME_MAT, 0, 3.66, 0.25);
 
-    // Roof bar / roll cage hint
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 0.12), CHROME_MAT);
-    bar.position.set(0, 3.66, 0.25);
-    root.add(bar);
-
-    // WHEELS
-    const wheelSpins = []; // inner spin groups
-    const wheelPivots = []; // outer pivots (steer)
-
-    const wPos = [
-        [-1.62, 1.1,  1.55, true ],
-        [ 1.62, 1.1,  1.55, true ],
-        [-1.62, 1.1, -1.55, false],
-        [ 1.62, 1.1, -1.55, false],
+    // Wheels
+    const wheelSpins  = [];
+    const wheelPivots = [];
+    const wDefs = [
+        { x: -1.62, y: 1.1, z:  1.55, front: true  },
+        { x:  1.62, y: 1.1, z:  1.55, front: true  },
+        { x: -1.62, y: 1.1, z: -1.55, front: false },
+        { x:  1.62, y: 1.1, z: -1.55, front: false },
     ];
-
-    wPos.forEach(([wx, wy, wz, isFront]) => {
+    wDefs.forEach(({ x: wx, y: wy, z: wz, front }) => {
         const pivot = new THREE.Group();
         pivot.position.set(wx, wy, wz);
         root.add(pivot);
 
-        const spinGroup = new THREE.Group();
-        pivot.add(spinGroup);
+        const spin = new THREE.Group();
+        pivot.add(spin);
 
-        // Tire (thick cylinder along X axis)
         const tire = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 1.08, 0.72, 18), WHEEL_MAT);
-        tire.rotation.z = Math.PI/2;
-        tire.castShadow = true;
-        spinGroup.add(tire);
+        tire.rotation.z = Math.PI / 2; tire.castShadow = true; spin.add(tire);
 
-        // Rim
         const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.74, 10), RIM_MAT);
-        rim.rotation.z = Math.PI/2;
-        spinGroup.add(rim);
+        rim.rotation.z = Math.PI / 2; spin.add(rim);
 
-        // Spokes
         for (let s = 0; s < 5; s++) {
             const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.76, 0.08),
-                new THREE.MeshPhongMaterial({ color:0x666666 }));
-            spoke.rotation.set(0, 0, s * Math.PI/5 * 2);
-            spinGroup.add(spoke);
+                new THREE.MeshPhongMaterial({ color: 0x666666 }));
+            spoke.rotation.set(0, 0, s * Math.PI / 5 * 2); spin.add(spoke);
         }
 
-        // Suspension arms
         const arm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.9),
-            new THREE.MeshPhongMaterial({ color:0x444444 }));
-        arm.position.set(wx < 0 ? 0.4 : -0.4, 0, 0);
-        pivot.add(arm);
+            new THREE.MeshPhongMaterial({ color: 0x444444 }));
+        arm.position.set(wx < 0 ? 0.4 : -0.4, 0, 0); pivot.add(arm);
 
-        wheelSpins.push(spinGroup);
-        wheelPivots.push({ pivot, isFront });
+        wheelSpins.push(spin);
+        wheelPivots.push({ pivot, front });
     });
 
     return { root, wheelSpins, wheelPivots };
 }
 
-const { root: truck, wheelSpins, wheelPivots } = buildMonsterTruck();
+const { root: truck, wheelSpins, wheelPivots } = buildTruck();
 scene.add(truck);
 
-// ══════════════════════════════════════════════════════
-//  CAR PHYSICS
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  AUTO-PHYSIK
+// ═══════════════════════════════════════════════════
 const car = {
-    pos:       new THREE.Vector3(0, 0, 0),
-    angle:     0,
-    speed:     0,
-    steer:     0,
-    health:    100,
-    maxHealth: 100,
-    score:     0,
-    kills:     0,
-    dead:      false,
-    dmgFlash:  0,
-    damageCooldown: 0,
+    pos:      new THREE.Vector3(0, 0, 0),
+    angle:    0,
+    speed:    0,
+    steer:    0,
+    health:   100,
+    score:    0,
+    kills:    0,
+    dead:     false,
+    dmgFlash: 0,
+    dmgCD:    0,
 };
+const ACCEL = 13, BRAKE_F = 20, MAX_SPD = 16, MAX_REV = 7;
+const STEER_MAX = 0.58, STEER_SPD = 2.5, FRICTION = 0.91, WB = 3.1;
 
-const ACCEL      = 13;
-const BRAKE_F    = 20;
-const MAX_SPD    = 16;
-const MAX_REV    = 7;
-const FRICTION   = 0.91;
-const STEER_MAX  = 0.58;
-const STEER_SPD  = 2.5;
-const WHEEL_BASE = 3.1;
-
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 //  INPUT
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
 const keys = {};
-addEventListener('keydown', e => { keys[e.code] = true;  if(['Space','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault(); });
-addEventListener('keyup',   e => { keys[e.code] = false; });
+addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ══════════════════════════════════════════════════════
-//  ENEMY MODELS
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  ZOMBIE-MODELL
+// ═══════════════════════════════════════════════════
 function makeZombie() {
     const g = new THREE.Group();
-    const skinMat = new THREE.MeshLambertMaterial({ color:0x4a7a35 });
-    const darkMat = new THREE.MeshLambertMaterial({ color:0x3a5a28 });
-    const clothMat= new THREE.MeshLambertMaterial({ color:0x3d2810 });
-    const eyeMat  = new THREE.MeshPhongMaterial({ color:0xff1100, emissive:0xdd0000, shininess:300 });
+    const skin  = new THREE.MeshLambertMaterial({ color: 0x4a7a35 });
+    const dark  = new THREE.MeshLambertMaterial({ color: 0x3a5a28 });
+    const cloth = new THREE.MeshLambertMaterial({ color: 0x3d2810 });
+    const eye   = new THREE.MeshPhongMaterial({ color: 0xff1100, emissive: 0xdd0000 });
+    const hair  = new THREE.MeshLambertMaterial({ color: 0x1a1005 });
+
+    function addBox(mat, w, h, d, px, py, pz, rx, ry, rz) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(px, py, pz);
+        if (rx) m.rotation.x = rx;
+        if (ry) m.rotation.y = ry;
+        if (rz) m.rotation.z = rz;
+        m.castShadow = true;
+        g.add(m);
+        return m;
+    }
 
     // Legs
-    [-0.14, 0.14].forEach((x,i) => {
-        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.6, 0.22), clothMat);
-        leg.position.set(x, 0.34, 0);
-        leg.castShadow = true;
-        g.add(leg);
-        // Foot
-        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.12, 0.3), darkMat);
-        foot.position.set(x, 0.06, 0.04);
-        g.add(foot);
+    [-0.14, 0.14].forEach(x => {
+        addBox(cloth, 0.22, 0.6, 0.22, x, 0.34, 0);
+        addBox(dark,  0.2,  0.12, 0.3,  x, 0.06, 0.04);
     });
-    // Body
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.68, 0.3), clothMat);
-    body.position.y = 1.02; body.castShadow = true; g.add(body);
-    // Torso skin visible at collar
-    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.18, 0.32), skinMat);
-    collar.position.y = 1.3; g.add(collar);
-    // Head
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.36), skinMat);
-    head.position.y = 1.68; head.castShadow = true; g.add(head);
-    // Mouth
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.07, 0.04),
-        new THREE.MeshLambertMaterial({ color:0x1a0505 }));
-    mouth.position.set(0, 1.59, 0.185); g.add(mouth);
-    // Eyes
-    [-0.09, 0.09].forEach(x => {
-        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.07, 0.04), eyeMat);
-        eye.position.set(x, 1.73, 0.185); g.add(eye);
-    });
-    // Hair clumps
-    const hairMat = new THREE.MeshLambertMaterial({ color:0x1a1005 });
-    for (let i = 0; i < 4; i++) {
-        const hair = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), hairMat);
-        hair.position.set((Math.random()-0.5)*0.28, 1.9, (Math.random()-0.5)*0.28);
-        g.add(hair);
-    }
-    // Arms (outstretched zombie pose)
-    [{ x:-0.38, rz:0.5 }, { x:0.38, rz:-0.5 }].forEach(({x, rz}) => {
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.52, 0.2), skinMat);
+    addBox(cloth, 0.52, 0.68, 0.3, 0, 1.02, 0);
+    addBox(skin,  0.38, 0.18, 0.32, 0, 1.3, 0);
+    addBox(skin,  0.36, 0.36, 0.36, 0, 1.68, 0);
+    addBox(new THREE.MeshLambertMaterial({ color: 0x1a0505 }), 0.18, 0.07, 0.04, 0, 1.59, 0.185);
+    [-0.09, 0.09].forEach(x => addBox(eye, 0.08, 0.07, 0.04, x, 1.73, 0.185));
+    for (let i = 0; i < 4; i++)
+        addBox(hair, 0.1, 0.12, 0.1, (Math.random()-0.5)*0.28, 1.9, (Math.random()-0.5)*0.28);
+    // Arms zombie-pose
+    [-0.38, 0.38].forEach((x, i) => {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.52, 0.2), skin);
         arm.position.set(x, 1.08, -0.05);
-        arm.rotation.set(-0.35, 0, rz);
-        arm.castShadow = true;
-        g.add(arm);
-        // Hand
-        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.18), darkMat);
-        hand.position.set(x < 0 ? x-0.12 : x+0.12, 0.84, -0.22);
-        g.add(hand);
+        arm.rotation.set(-0.35, 0, i === 0 ? 0.5 : -0.5);
+        arm.castShadow = true; g.add(arm);
+        addBox(dark, 0.18, 0.18, 0.18, x < 0 ? x-0.12 : x+0.12, 0.84, -0.22);
     });
-
-    g.userData.walkPhase = Math.random()*Math.PI*2;
+    g.userData.wp = Math.random() * Math.PI * 2;
     return g;
 }
 
+// ═══════════════════════════════════════════════════
+//  ROBOTER-MODELL
+// ═══════════════════════════════════════════════════
 function makeRobot() {
     const g = new THREE.Group();
-    const metalMat = new THREE.MeshPhongMaterial({ color:0x6a6a80, shininess:120 });
-    const darkMetal= new THREE.MeshPhongMaterial({ color:0x3a3a50, shininess:80 });
-    const eyeMat   = new THREE.MeshPhongMaterial({ color:0xff2200, emissive:0xff1100, shininess:400 });
-    const accentMat= new THREE.MeshPhongMaterial({ color:0x8888ff, emissive:0x2222aa });
+    const metal  = new THREE.MeshPhongMaterial({ color: 0x6a6a80, shininess: 120 });
+    const darkM  = new THREE.MeshPhongMaterial({ color: 0x3a3a50, shininess: 80 });
+    const eyeM   = new THREE.MeshPhongMaterial({ color: 0xff2200, emissive: 0xff1100 });
+    const accent = new THREE.MeshPhongMaterial({ color: 0x8888ff, emissive: 0x2222aa });
 
-    // Legs
-    [-0.17, 0.17].forEach((x,i) => {
-        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.38, 0.22), metalMat);
-        thigh.position.set(x, 0.54, 0); thigh.castShadow = true; g.add(thigh);
-        const shin  = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.34, 0.2), darkMetal);
-        shin.position.set(x, 0.2, 0); shin.castShadow = true; g.add(shin);
-        const foot  = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.14, 0.34), metalMat);
-        foot.position.set(x, 0.05, 0.06); g.add(foot);
-        // Knee joint
-        const knee = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), darkMetal);
+    function addBox(mat, w, h, d, px, py, pz) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(px, py, pz); m.castShadow = true; g.add(m); return m;
+    }
+
+    [-0.17, 0.17].forEach(x => {
+        addBox(metal, 0.22, 0.38, 0.22, x, 0.54, 0);
+        addBox(darkM, 0.2,  0.34, 0.2,  x, 0.2,  0);
+        addBox(metal, 0.26, 0.14, 0.34, x, 0.05, 0.06);
+        const knee = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), darkM);
         knee.position.set(x, 0.37, 0); g.add(knee);
     });
-    // Pelvis
-    const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.22, 0.3), darkMetal);
-    pelvis.position.y = 0.78; g.add(pelvis);
-    // Torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.36), metalMat);
-    torso.position.y = 1.2; torso.castShadow = true; g.add(torso);
-    // Chest accent (glowing blue line)
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.1, 0.04), accentMat);
-    chest.position.set(0, 1.28, 0.19); g.add(chest);
-    // Shoulder pads
-    [-0.42, 0.42].forEach(x => {
-        const pad = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.42), metalMat);
-        pad.position.set(x, 1.42, 0); g.add(pad);
-    });
-    // Arms
-    [{ x:-0.46, rz:0.15 }, { x:0.46, rz:-0.15 }].forEach(({x, rz}) => {
-        const upper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.42, 0.2), metalMat);
-        upper.position.set(x, 1.08, 0); upper.rotation.z = rz; g.add(upper);
-        const lower = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.36, 0.18), darkMetal);
-        lower.position.set(x < 0 ? x-0.03 : x+0.03, 0.76, 0); g.add(lower);
-        // Claw
-        const claw = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.24), metalMat);
-        claw.position.set(x < 0 ? x-0.04 : x+0.04, 0.54, 0); g.add(claw);
-        // Claw spikes
+    addBox(darkM,  0.52, 0.22, 0.3,  0, 0.78, 0);
+    addBox(metal,  0.6,  0.7,  0.36, 0, 1.2,  0);
+    addBox(accent, 0.35, 0.1,  0.04, 0, 1.28, 0.19);
+    [-0.42, 0.42].forEach(x => addBox(metal, 0.22, 0.22, 0.42, x, 1.42, 0));
+    [-0.46, 0.46].forEach((x, i) => {
+        const upper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.42, 0.2), metal);
+        upper.position.set(x, 1.08, 0); upper.rotation.z = i===0?0.15:-0.15; g.add(upper);
+        addBox(darkM, 0.18, 0.36, 0.18, x < 0 ? x-0.03 : x+0.03, 0.76, 0);
+        addBox(metal, 0.24, 0.24, 0.24, x < 0 ? x-0.04 : x+0.04, 0.54, 0);
         for (let s = 0; s < 3; s++) {
             const spike = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.16, 5),
-                new THREE.MeshPhongMaterial({ color:0xcccccc, shininess:200 }));
+                new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 200 }));
             spike.position.set(x < 0 ? x-0.04 : x+0.04, 0.38, (s-1)*0.1);
             spike.rotation.z = x < 0 ? Math.PI/2 : -Math.PI/2;
             g.add(spike);
         }
     });
-    // Neck
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.2, 8), darkMetal);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.2, 8), darkM);
     neck.position.y = 1.62; g.add(neck);
-    // Head (boxy)
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.42, 0.42), metalMat);
-    head.position.y = 1.9; head.castShadow = true; g.add(head);
-    // Antenna
-    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 6), darkMetal);
+    addBox(metal, 0.48, 0.42, 0.42, 0, 1.9, 0);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 6), darkM);
     ant.position.set(0.15, 2.27, 0); g.add(ant);
-    // Eyes
-    [-0.1, 0.1].forEach(x => {
-        const eye = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.05), eyeMat);
-        eye.position.set(x, 1.93, 0.22); g.add(eye);
-    });
-    // Mouth grill
+    [-0.1, 0.1].forEach(x => addBox(eyeM, 0.1, 0.07, 0.05, x, 1.93, 0.22));
     for (let i = -2; i <= 2; i++) {
         const slot = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.04),
-            new THREE.MeshLambertMaterial({ color:0x111111 }));
+            new THREE.MeshLambertMaterial({ color: 0x111111 }));
         slot.position.set(i*0.07, 1.77, 0.22); g.add(slot);
     }
-
-    g.userData.walkPhase = Math.random()*Math.PI*2;
+    g.userData.wp = Math.random() * Math.PI * 2;
     return g;
 }
 
-// ══════════════════════════════════════════════════════
-//  ENEMIES
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  FEINDE
+// ═══════════════════════════════════════════════════
 const enemies = [];
 
 function spawnEnemy(type) {
     let x, z;
     do {
-        x = (Math.random()-0.5)*(MAP-5);
-        z = (Math.random()-0.5)*(MAP-5);
-    } while (Math.sqrt((x-car.pos.x)**2 + (z-car.pos.z)**2) < 9);
+        x = (Math.random() - 0.5) * (MAP - 5);
+        z = (Math.random() - 0.5) * (MAP - 5);
+    } while (Math.sqrt((x - car.pos.x) ** 2 + (z - car.pos.z) ** 2) < 9);
 
     const mesh = type === 'zombie' ? makeZombie() : makeRobot();
     mesh.position.set(x, 0, z);
+    scene.add(mesh);
 
-    const e = {
+    enemies.push({
         mesh, type,
         hp:   type === 'zombie' ? 30 : 55,
-        maxHp: type === 'zombie' ? 30 : 55,
         alive: true,
+        dying: false, dyingT: 0,
         atkTimer: 0,
-        speed: type === 'zombie' ? 1.7 + Math.random()*0.9 : 2.1 + Math.random()*0.9,
-        dying: false,
-        dyingT: 0,
-    };
-    scene.add(mesh);
-    enemies.push(e);
+        speed: type === 'zombie' ? 1.7 + Math.random() * 0.9 : 2.1 + Math.random() * 0.9,
+    });
 }
 
-// Initial enemies
-for (let i = 0; i < 10; i++) spawnEnemy(i%2===0 ? 'zombie' : 'robot');
-
+for (let i = 0; i < 10; i++) spawnEnemy(i % 2 === 0 ? 'zombie' : 'robot');
 let spawnTimer = 0;
-const SPAWN_INT = 4.5;
 
-// ══════════════════════════════════════════════════════
-//  PARTICLES
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  PARTIKEL
+// ═══════════════════════════════════════════════════
 const particles = [];
 
-function burst(pos, color, count=10, speed=5) {
-    const mat = new THREE.MeshBasicMaterial({ color, transparent:true, opacity:1 });
+function burst(pos, color, count, speed) {
+    count = count || 10; speed = speed || 5;
     for (let i = 0; i < count; i++) {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(0.13,0.13,0.13), mat.clone());
-        m.position.copy(pos).add(new THREE.Vector3(0,1,0));
+        const m = new THREE.Mesh(
+            new THREE.BoxGeometry(0.13, 0.13, 0.13),
+            new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 1 })
+        );
+        m.position.set(pos.x, pos.y + 1, pos.z);
         const v = new THREE.Vector3(
-            (Math.random()-0.5)*speed,
-            Math.random()*speed*0.8 + 1.5,
-            (Math.random()-0.5)*speed
+            (Math.random() - 0.5) * speed,
+            Math.random() * speed * 0.8 + 1.5,
+            (Math.random() - 0.5) * speed
         );
         scene.add(m);
-        particles.push({ m, v, life:1.0, decay: 0.8 + Math.random()*0.5 });
+        particles.push({ m, v, life: 1.0 });
     }
 }
 
-// ══════════════════════════════════════════════════════
-//  UI ELEMENTS
-// ══════════════════════════════════════════════════════
-const hbar      = document.getElementById('hbar');
-const hText     = document.getElementById('health-text');
-const scoreEl   = document.getElementById('score-text');
-const killsEl   = document.getElementById('kills-text');
-const waveEl    = document.getElementById('wave-text');
-const gameOverEl= document.getElementById('gameover');
+// ═══════════════════════════════════════════════════
+//  ENEMY TÖTEN
+// ═══════════════════════════════════════════════════
+function killEnemy(e) {
+    if (!e.alive) return;
+    e.alive = false;
+    e.dying = true;
+    e.dyingT = 0;
+    if (e.type === 'zombie') {
+        burst(e.mesh.position, 0x8B0000, 10, 5);
+        car.score += 100;
+    } else {
+        burst(e.mesh.position, 0xaaaaaa, 12, 6);
+        car.score += 150;
+    }
+    car.kills++;
+    updateUI();
+}
+
+// ═══════════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════════
+const hbar    = document.getElementById('hbar');
+const hpTxt   = document.getElementById('hp-txt');
+const scTxt   = document.getElementById('sc-txt');
+const klTxt   = document.getElementById('kl-txt');
+const enTxt   = document.getElementById('en-txt');
+const goEl    = document.getElementById('gameover');
 
 function updateUI() {
-    const pct = Math.max(0, car.health / car.maxHealth * 100);
+    const pct = Math.max(0, car.health / 100 * 100);
     hbar.style.width = pct + '%';
     if      (pct > 60) hbar.style.background = 'linear-gradient(90deg,#4caf50,#8bc34a)';
     else if (pct > 30) hbar.style.background = 'linear-gradient(90deg,#ff9800,#ffc107)';
     else               hbar.style.background = 'linear-gradient(90deg,#e63946,#ff5252)';
-    hText.textContent   = `${Math.max(0,Math.ceil(car.health))} / 100`;
-    scoreEl.textContent = `★ Score: ${car.score}`;
-    killsEl.textContent = `☠ Kills: ${car.kills}`;
-    waveEl.textContent  = `Feinde: ${enemies.filter(e=>e.alive).length}`;
+    hpTxt.textContent = Math.max(0, Math.ceil(car.health)) + ' / 100';
+    scTxt.textContent = '★ Score: ' + car.score;
+    klTxt.textContent = '☠ Kills: ' + car.kills;
+    enTxt.textContent = 'Feinde: ' + enemies.filter(e => e.alive).length;
 }
 
 function showGameOver() {
-    document.getElementById('go-info').textContent =
-        `Score: ${car.score}  |  Kills: ${car.kills}`;
-    gameOverEl.style.display = 'flex';
+    document.getElementById('go-info').textContent = 'Score: ' + car.score + '  |  Kills: ' + car.kills;
+    goEl.style.display = 'flex';
 }
 
-// ══════════════════════════════════════════════════════
-//  CAMERA STATE
-// ══════════════════════════════════════════════════════
-const camLookAt = new THREE.Vector3();
-let camYaw   = 0;
-const CAM_DIST = 14;
-const CAM_H    = 9;
+// ═══════════════════════════════════════════════════
+//  KAMERA
+// ═══════════════════════════════════════════════════
+const camLook = new THREE.Vector3();
+const CAM_DIST = 14, CAM_H = 9;
 
-// ══════════════════════════════════════════════════════
-//  MAIN LOOP
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  HAUPTSCHLEIFE
+// ═══════════════════════════════════════════════════
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.05);
 
-    if (car.dead) {
-        renderer.render(scene, camera);
-        return;
-    }
+    if (car.dead) { renderer.render(scene, camera); return; }
 
-    // ─── INPUT ──────────────────────────────────────
-    const gas    = keys['KeyW']     || keys['ArrowUp'];
-    const rev    = keys['KeyS']     || keys['ArrowDown'];
-    const left   = keys['KeyA']     || keys['ArrowLeft'];
-    const right  = keys['KeyD']     || keys['ArrowRight'];
+    // ── Eingabe ─────────────────────────────────────
+    const gas    = keys['KeyW']    || keys['ArrowUp'];
+    const rev    = keys['KeyS']    || keys['ArrowDown'];
+    const left   = keys['KeyA']    || keys['ArrowLeft'];
+    const right  = keys['KeyD']    || keys['ArrowRight'];
     const ebrake = keys['Space'];
 
-    // Steering
+    // Lenkung
     const steerTarget = left ? STEER_MAX : right ? -STEER_MAX : 0;
     car.steer += (steerTarget - car.steer) * STEER_SPD * dt;
 
-    // Throttle / brake
+    // Beschleunigung
     if (gas) {
         car.speed = Math.min(car.speed + ACCEL * dt, MAX_SPD);
     } else if (rev) {
         if (car.speed > 0.3) car.speed -= BRAKE_F * dt;
-        else car.speed = Math.max(car.speed - ACCEL*0.55 * dt, -MAX_REV);
+        else car.speed = Math.max(car.speed - ACCEL * 0.55 * dt, -MAX_REV);
     } else if (ebrake) {
         car.speed *= Math.pow(0.35, dt * 6);
     }
 
-    // Friction when coasting
     if (!gas && !rev && !ebrake) {
         car.speed *= Math.pow(FRICTION, dt * 60);
         if (Math.abs(car.speed) < 0.04) car.speed = 0;
     }
 
-    // Turning (bicycle model)
-    if (Math.abs(car.speed) > 0.05) {
-        const turnRate = (car.speed / WHEEL_BASE) * Math.sin(car.steer);
-        car.angle += turnRate * dt * 2.4;
-    }
+    // Fahrrichtung (Fahrradmodell)
+    if (Math.abs(car.speed) > 0.05)
+        car.angle += (car.speed / WB) * Math.sin(car.steer) * dt * 2.4;
 
-    // Move
     car.pos.x += Math.sin(car.angle) * car.speed * dt;
     car.pos.z += Math.cos(car.angle) * car.speed * dt;
 
-    // Boundary clamp + bounce
+    // Kartenrand
     const push = 1.5;
-    if (car.pos.x < -HALF+push) { car.pos.x = -HALF+push; car.speed *= -0.35; }
-    if (car.pos.x >  HALF-push) { car.pos.x =  HALF-push; car.speed *= -0.35; }
-    if (car.pos.z < -HALF+push) { car.pos.z = -HALF+push; car.speed *= -0.35; }
-    if (car.pos.z >  HALF-push) { car.pos.z =  HALF-push; car.speed *= -0.35; }
+    if (car.pos.x < -HALF + push) { car.pos.x = -HALF + push; car.speed *= -0.35; }
+    if (car.pos.x >  HALF - push) { car.pos.x =  HALF - push; car.speed *= -0.35; }
+    if (car.pos.z < -HALF + push) { car.pos.z = -HALF + push; car.speed *= -0.35; }
+    if (car.pos.z >  HALF - push) { car.pos.z =  HALF - push; car.speed *= -0.35; }
 
-    // Apply to truck mesh
     truck.position.set(car.pos.x, 0, car.pos.z);
     truck.rotation.y = car.angle;
 
-    // Wheel spin
+    // Räder drehen
     const wSpin = car.speed * dt * 1.2;
-    wheelSpins.forEach(sg => { sg.rotation.y += wSpin; });
-    wheelPivots.forEach(({pivot, isFront}) => {
-        if (isFront) pivot.rotation.y = car.steer * 0.65;
-    });
+    wheelSpins.forEach(s => { s.rotation.y += wSpin; });
+    wheelPivots.forEach(({ pivot, front }) => { if (front) pivot.rotation.y = car.steer * 0.65; });
 
-    // Body suspension roll
-    const speedFrac = Math.abs(car.speed) / MAX_SPD;
-    truck.children[0].position.y = 1.8 + Math.abs(Math.sin(clock.elapsedTime*8)) * speedFrac * 0.04;
-    // slight body roll on steer
-    truck.children[1].rotation.z = -car.steer * 0.1 * speedFrac;
+    // Karosserie-Schaukeln
+    const sf = Math.abs(car.speed) / MAX_SPD;
+    truck.children[0].position.y = 1.8 + Math.abs(Math.sin(clock.elapsedTime * 8)) * sf * 0.04;
 
-    // ─── TREE COLLISIONS ────────────────────────────
+    // ── Baumkollisionen ──────────────────────────────
     trees.forEach(t => {
         if (t.userData.broken) {
-            if (t.userData.fallAngle < Math.PI/2) {
+            if (t.userData.fallAngle < Math.PI / 2) {
                 t.userData.fallAngle += dt * 2.2;
-                const a = Math.min(t.userData.fallAngle, Math.PI/2);
+                const a  = Math.min(t.userData.fallAngle, Math.PI / 2);
                 const fd = t.userData.fallDir;
                 t.rotation.x =  fd.z * a;
                 t.rotation.z = -fd.x * a;
@@ -771,25 +660,25 @@ function animate() {
         }
         const dx = t.position.x - car.pos.x;
         const dz = t.position.z - car.pos.z;
-        if (dx*dx + dz*dz < (t.userData.col + 1.5)**2) {
+        if (dx*dx + dz*dz < (t.userData.col + 1.5) ** 2) {
             t.userData.broken = true;
-            const mag = Math.sqrt(dx*dx+dz*dz) || 1;
+            const mag = Math.sqrt(dx*dx + dz*dz) || 1;
             t.userData.fallDir.set(dx/mag, 0, dz/mag);
             car.speed *= 0.55;
-            burst(t.position.clone().add(new THREE.Vector3(0,1,0)), 0x3a1e0a, 6, 3);
+            burst(t.position, 0x3a1e0a, 6, 3);
         }
     });
 
-    // ─── ENEMY UPDATE ───────────────────────────────
+    // ── Feinde ───────────────────────────────────────
     spawnTimer += dt;
-    const aliveCount = enemies.filter(e => e.alive).length;
-    if (spawnTimer >= SPAWN_INT && aliveCount < 22) {
+    if (spawnTimer >= 4.5 && enemies.filter(e => e.alive).length < 22) {
         spawnTimer = 0;
         spawnEnemy(Math.random() < 0.5 ? 'zombie' : 'robot');
-        if (aliveCount < 12) spawnEnemy(Math.random() < 0.5 ? 'zombie' : 'robot');
+        if (enemies.filter(e => e.alive).length < 12)
+            spawnEnemy(Math.random() < 0.5 ? 'zombie' : 'robot');
     }
 
-    car.damageCooldown = Math.max(0, car.damageCooldown - dt);
+    car.dmgCD = Math.max(0, car.dmgCD - dt);
 
     enemies.forEach(e => {
         if (!e.alive) return;
@@ -798,57 +687,51 @@ function animate() {
             e.dyingT += dt;
             e.mesh.position.y -= dt * 1.2;
             e.mesh.rotation.z += dt * 3;
-            if (e.dyingT > 1.2) scene.remove(e.mesh);
+            if (e.dyingT > 1.2) {
+                scene.remove(e.mesh);
+                e.dying = false;
+            }
             return;
         }
 
-        // Chase car
-        const dx = car.pos.x - e.mesh.position.x;
-        const dz = car.pos.z - e.mesh.position.z;
+        // Auf Auto zubewegen
+        const dx   = car.pos.x - e.mesh.position.x;
+        const dz   = car.pos.z - e.mesh.position.z;
         const dist = Math.sqrt(dx*dx + dz*dz);
-
         if (dist > 0.3) {
-            const nx = dx/dist, nz = dz/dist;
-            e.mesh.position.x += nx * e.speed * dt;
-            e.mesh.position.z += nz * e.speed * dt;
-            e.mesh.rotation.y = Math.atan2(dx, dz);
+            e.mesh.position.x += (dx/dist) * e.speed * dt;
+            e.mesh.position.z += (dz/dist) * e.speed * dt;
+            e.mesh.rotation.y  = Math.atan2(dx, dz);
         }
 
-        // Walk animation
-        e.mesh.userData.walkPhase += dt * (e.speed * 3.5);
-        const bob = Math.abs(Math.sin(e.mesh.userData.walkPhase)) * 0.09;
-        e.mesh.position.y = Math.max(0, bob);
-        // Lean forward slightly
-        e.mesh.rotation.x = 0.12;
+        // Lauf-Animation (Wippen)
+        e.mesh.userData.wp += dt * e.speed * 3.5;
+        e.mesh.position.y   = Math.abs(Math.sin(e.mesh.userData.wp)) * 0.09;
+        e.mesh.rotation.x   = 0.12;
 
-        // Attack car
+        // Schaden am Auto
         if (dist < 2.2) {
             e.atkTimer += dt;
-            if (e.atkTimer >= 1.0 && car.damageCooldown <= 0) {
+            if (e.atkTimer >= 1.0 && car.dmgCD <= 0) {
                 car.health -= 5;
-                e.atkTimer = 0;
-                car.damageCooldown = 0.25;
-                // Flash truck red
+                e.atkTimer  = 0;
+                car.dmgCD   = 0.25;
                 car.dmgFlash = 0.18;
                 updateUI();
-                if (car.health <= 0) {
-                    car.dead = true;
-                    showGameOver();
-                }
+                if (car.health <= 0) { car.dead = true; showGameOver(); }
             }
         } else {
             e.atkTimer = 0;
         }
 
-        // Car runs over enemy
+        // Auto überfährt Feind
         if (dist < 2.4 && Math.abs(car.speed) > 3.5) {
-            const dmg = Math.abs(car.speed) * 3.5 * dt;
-            e.hp -= dmg;
+            e.hp -= Math.abs(car.speed) * 3.5 * dt;
             if (e.hp <= 0) killEnemy(e);
         }
     });
 
-    // Damage flash
+    // Schadensblitz
     if (car.dmgFlash > 0) {
         car.dmgFlash -= dt;
         CAR_BODY_MAT.color.setHex(car.dmgFlash > 0 ? 0xff2200 : 0x1c3d72);
@@ -856,28 +739,27 @@ function animate() {
         CAR_BODY_MAT.color.setHex(0x1c3d72);
     }
 
-    // ─── PARTICLES ──────────────────────────────────
-    for (let i = particles.length-1; i >= 0; i--) {
+    // ── Partikel ──────────────────────────────────────
+    for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.v.y -= 9.8 * dt;
         p.m.position.addScaledVector(p.v, dt);
-        p.life -= p.decay * dt;
+        p.life -= 0.9 * dt;
         p.m.material.opacity = Math.max(0, p.life);
-        if (p.life <= 0) { scene.remove(p.m); particles.splice(i,1); }
+        if (p.life <= 0) { scene.remove(p.m); particles.splice(i, 1); }
     }
 
-    // ─── CAMERA ─────────────────────────────────────
-    const tCamX = car.pos.x - Math.sin(car.angle) * CAM_DIST;
-    const tCamZ = car.pos.z - Math.cos(car.angle) * CAM_DIST;
-    camera.position.x += (tCamX      - camera.position.x) * 6 * dt;
-    camera.position.z += (tCamZ      - camera.position.z) * 6 * dt;
-    camera.position.y += (CAM_H      - camera.position.y) * 5 * dt;
-    camLookAt.set(car.pos.x, 1.8, car.pos.z);
-    camera.lookAt(camLookAt);
+    // ── Kamera folgt Auto ─────────────────────────────
+    const tX = car.pos.x - Math.sin(car.angle) * CAM_DIST;
+    const tZ = car.pos.z - Math.cos(car.angle) * CAM_DIST;
+    camera.position.x += (tX    - camera.position.x) * 6 * dt;
+    camera.position.z += (tZ    - camera.position.z) * 6 * dt;
+    camera.position.y += (CAM_H - camera.position.y) * 5 * dt;
+    camLook.set(car.pos.x, 1.8, car.pos.z);
+    camera.lookAt(camLook);
 
-    // ─── RENDER ─────────────────────────────────────
-    renderer.render(scene, camera);
     updateUI();
+    renderer.render(scene, camera);
 }
 
 updateUI();
