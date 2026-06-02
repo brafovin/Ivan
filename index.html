@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Forest Rampage 3D</title>
+<title>Лесная Атака 3D</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { overflow:hidden; background:#0d0818; font-family:Arial,sans-serif; }
@@ -45,18 +45,18 @@ canvas { display:block; }
 </head>
 <body>
 <div id="ui">
-    <div class="lbl">Gesundheit</div>
+    <div class="lbl">Здоровье</div>
     <div id="hbar-bg"><div id="hbar"></div></div>
     <div id="hp-txt">100 / 100</div>
-    <div id="sc-txt">★ Score: 0</div>
-    <div id="kl-txt">☠ Kills: 0</div>
-    <div id="en-txt">Feinde: 0</div>
+    <div id="sc-txt">★ Очки: 0</div>
+    <div id="kl-txt">☠ Убито: 0</div>
+    <div id="en-txt">Враги: 0</div>
 </div>
-<div id="controls">W/↑ Gas &nbsp;·&nbsp; S/↓ Bremse &nbsp;·&nbsp; A/D Lenken &nbsp;·&nbsp; LEERTASTE Handbremse</div>
+<div id="controls">W/↑ Газ &nbsp;·&nbsp; S/↓ Тормоз &nbsp;·&nbsp; A/D Руль &nbsp;·&nbsp; ПРОБЕЛ Ручной тормоз</div>
 <div id="gameover">
-    <h1>GAME OVER</h1>
+    <h1>ИГРА ОКОНЧЕНА</h1>
     <div id="go-info"></div>
-    <button id="restart-btn" onclick="location.reload()">Nochmal spielen</button>
+    <button id="restart-btn" onclick="location.reload()">Играть снова</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -567,13 +567,13 @@ function updateUI() {
     else if (pct > 30) hbar.style.background = 'linear-gradient(90deg,#ff9800,#ffc107)';
     else               hbar.style.background = 'linear-gradient(90deg,#e63946,#ff5252)';
     hpTxt.textContent = Math.max(0, Math.ceil(car.health)) + ' / 100';
-    scTxt.textContent = '★ Score: ' + car.score;
-    klTxt.textContent = '☠ Kills: ' + car.kills;
-    enTxt.textContent = 'Feinde: ' + enemies.filter(e => e.alive).length;
+    scTxt.textContent = '★ Очки: ' + car.score;
+    klTxt.textContent = '☠ Убито: ' + car.kills;
+    enTxt.textContent = 'Враги: ' + enemies.filter(e => e.alive).length;
 }
 
 function showGameOver() {
-    document.getElementById('go-info').textContent = 'Score: ' + car.score + '  |  Kills: ' + car.kills;
+    document.getElementById('go-info').textContent = 'Очки: ' + car.score + '  |  Убито: ' + car.kills;
     goEl.style.display = 'flex';
 }
 
