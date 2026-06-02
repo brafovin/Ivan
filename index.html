@@ -2,293 +2,512 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Лесная Атака 3D</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zombie Escape: Last City 3D</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{overflow:hidden;background:#000;font-family:Arial,sans-serif}
-canvas{display:block}
-#ui{position:fixed;top:20px;left:20px;pointer-events:none;z-index:10}
-.lbl{color:#aaa;font-size:11px;letter-spacing:1px;margin-bottom:4px}
-#hp-wrap{width:230px;height:20px;background:rgba(0,0,0,.6);border:2px solid rgba(255,255,255,.2);border-radius:10px;overflow:hidden}
-#hp-bar{height:100%;width:100%;background:linear-gradient(90deg,#4caf50,#8bc34a);border-radius:10px;transition:width .15s}
-#hp-txt{color:#fff;font-size:13px;margin-top:4px;text-shadow:1px 1px 2px #000}
-#sc-txt{color:#ffd700;font-size:16px;font-weight:bold;margin-top:10px;text-shadow:1px 1px 3px #000}
-#kl-txt{color:#a8dadc;font-size:13px;margin-top:3px;text-shadow:1px 1px 2px #000}
-#en-txt{color:#ff9966;font-size:12px;margin-top:2px}
-#ctrl{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.4);font-size:12px;text-align:center;pointer-events:none}
-#over{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);flex-direction:column;align-items:center;justify-content:center;z-index:100}
-#over h1{color:#e63946;font-size:64px;text-shadow:0 0 30px #e63946;margin-bottom:12px}
-#over p{color:#fff;font-size:20px;margin-bottom:24px}
-#over button{padding:13px 40px;font-size:18px;background:#e63946;color:#fff;border:none;border-radius:8px;cursor:pointer}
+body{background:#000;overflow:hidden;font-family:'Courier New',monospace}
+canvas{display:block;position:absolute;top:0;left:0}
+#screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.93);text-align:center;padding:24px}
+#screen h1{font-size:clamp(26px,5vw,54px);color:#ff0033;text-shadow:0 0 20px #ff0033,0 0 40px #ff0033;letter-spacing:5px;margin-bottom:6px}
+#screen h2{color:#660000;font-size:14px;letter-spacing:3px;margin-bottom:16px}
+.story{color:#993333;font-size:13px;max-width:480px;line-height:1.8;border:1px solid #330000;padding:14px;background:rgba(80,0,0,.1);margin:12px auto}
+.btn{margin-top:18px;padding:13px 38px;background:transparent;border:2px solid #ff0033;color:#ff0033;font-size:17px;font-family:'Courier New',monospace;cursor:pointer;letter-spacing:3px;text-shadow:0 0 8px #ff0033;box-shadow:0 0 15px rgba(255,0,51,.3);transition:all .2s}
+.btn:hover{background:rgba(255,0,51,.15);box-shadow:0 0 35px rgba(255,0,51,.7)}
+#hs{color:#440000;font-size:12px;margin-top:8px}
+#hud{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:20;padding:12px 16px;display:flex;justify-content:space-between;display:none}
+.hleft,.hright{display:flex;flex-direction:column;gap:5px}
+.lbl{color:#550000;font-size:10px;letter-spacing:2px}
+#hpbg{width:180px;height:13px;background:#1a0000;border:1px solid #440000}
+#hpfill{height:100%;background:linear-gradient(90deg,#cc0000,#ff4400);transition:width .1s}
+.hval{color:#ff3333;font-size:14px;font-weight:bold;text-shadow:0 0 6px #ff0033}
+#waveinfo{text-align:right}
+#wavetxt{color:#ff3333;font-size:15px;font-weight:bold}
+#scoretxt{color:#cc2222;font-size:12px}
+#encount{color:#552222;font-size:11px}
+#mmwrap{position:fixed;bottom:14px;right:14px;z-index:20;border:1px solid #440000;display:none}
+#mmwrap canvas{display:block}
+#cross{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,60,60,.5);font-size:18px;pointer-events:none;z-index:15;display:none}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:10;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.7) 100%)}
+#dmgflash{position:fixed;inset:0;pointer-events:none;z-index:11;background:rgba(200,0,0,0);transition:background .05s}
 </style>
 </head>
 <body>
-<div id="ui">
-  <div class="lbl">ЗДОРОВЬЕ</div>
-  <div id="hp-wrap"><div id="hp-bar"></div></div>
-  <div id="hp-txt">100 / 100</div>
-  <div id="sc-txt">&#9733; Очки: 0</div>
-  <div id="kl-txt">Убито: 0</div>
-  <div id="en-txt">Враги: 0</div>
+<div id="screen">
+  <h1>ZOMBIE ESCAPE</h1>
+  <h2>LAST CITY</h2>
+  <div class="story">
+    Вирус Z-13 уничтожил цивилизацию.<br>
+    Ты единственный выживший в Новограде.<br>
+    Улицы кишат мертвецами. Патроны кончаются.<br>
+    <em style="color:#ff2200">Выживи любой ценой.</em>
+  </div>
+  <div id="hs">Рекорд: <span id="hsval">0</span></div>
+  <button class="btn" id="mainbtn" onclick="startGame()">&#9654; ИГРАТЬ</button>
 </div>
-<div id="ctrl">W/&uarr; Газ &nbsp;&middot;&nbsp; S/&darr; Тормоз &nbsp;&middot;&nbsp; A/D Руль &nbsp;&middot;&nbsp; ПРОБЕЛ Ручной тормоз</div>
-<div id="over">
-  <h1>ИГРА ОКОНЧЕНА</h1>
-  <p id="res"></p>
-  <button onclick="location.reload()">Играть снова</button>
+<div id="hud">
+  <div class="hleft">
+    <div><div class="lbl">ЗДОРОВЬЕ</div><div id="hpbg"><div id="hpfill" style="width:100%"></div></div><div class="hval"><span id="hpval">100</span>/100</div></div>
+    <div><div class="lbl">ПАТРОНЫ</div><div class="hval"><span id="ammoval">30</span>/60</div></div>
+  </div>
+  <div class="hright" id="waveinfo">
+    <div id="wavetxt">ВОЛНА 1</div>
+    <div id="scoretxt">ОЧКИ: 0</div>
+    <div id="encount">Врагов: 0</div>
+  </div>
 </div>
+<div id="mmwrap"><canvas id="mm" width="120" height="120"></canvas></div>
+<div id="cross">+</div>
+<div id="vignette"></div>
+<div id="dmgflash"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-var MAP=45,HALF=22.5;
+// ===== ZOMBIE ESCAPE: LAST CITY 3D =====
+var W=window.innerWidth, H=window.innerHeight;
+var STATE='menu', score=0, wave=1, gameTime=0;
+var highScore=parseInt(localStorage.getItem('ze3d_hs')||'0');
+
+// UI refs
+var screenEl=document.getElementById('screen');
+var hudEl=document.getElementById('hud');
+var mmWrap=document.getElementById('mmwrap');
+var hpFill=document.getElementById('hpfill');
+var hpVal=document.getElementById('hpval');
+var ammoVal=document.getElementById('ammoval');
+var waveTxt=document.getElementById('wavetxt');
+var scoreTxt=document.getElementById('scoretxt');
+var enCount=document.getElementById('encount');
+var hsVal=document.getElementById('hsval');
+var crossEl=document.getElementById('cross');
+var dmgFlash=document.getElementById('dmgflash');
+var mmCanvas=document.getElementById('mm');
+var mmCtx=mmCanvas.getContext('2d');
+hsVal.textContent=highScore;
+
+// THREE.JS
+var scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x050508,0.038);
+scene.background=new THREE.Color(0x050508);
+var camera=new THREE.PerspectiveCamera(55,W/H,0.1,80);
+camera.position.set(0,22,13);
+camera.lookAt(0,0,0);
 var renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.setSize(W,H);
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
-window.addEventListener('resize',function(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+window.addEventListener('resize',function(){
+  W=window.innerWidth;H=window.innerHeight;
+  camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);
+});
 
-var scene=new THREE.Scene();
-scene.background=new THREE.Color(0x0d0520);
-scene.fog=new THREE.Fog(0x1a0830,30,75);
-var cam=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,200);
-cam.position.set(0,8,-14);
+// Raycaster
+var RC=new THREE.Raycaster();
+var mNDC=new THREE.Vector2();
+var mWorld=new THREE.Vector3();
+var gPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+var clock=new THREE.Clock();
 
-scene.add(new THREE.AmbientLight(0x2a1040,0.7));
-var dL=new THREE.DirectionalLight(0xff7030,1.4);
-dL.position.set(-20,10,-15);dL.castShadow=true;
-dL.shadow.mapSize.width=dL.shadow.mapSize.height=2048;
-dL.shadow.camera.near=1;dL.shadow.camera.far=80;
-dL.shadow.camera.left=dL.shadow.camera.bottom=-30;
-dL.shadow.camera.right=dL.shadow.camera.top=30;
-scene.add(dL);
-var mL=new THREE.DirectionalLight(0x3050c0,0.4);mL.position.set(15,25,10);scene.add(mL);
-scene.add(new THREE.HemisphereLight(0xff4820,0x180c28,0.45));
-
-// SKY
-(function(){
-  var sm=new THREE.ShaderMaterial({side:THREE.BackSide,
-    vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-    fragmentShader:'varying vec3 vP;void main(){float t=clamp(vP.y/130.0,0.0,1.0);vec3 c=mix(vec3(0.70,0.20,0.04),vec3(0.03,0.01,0.10),pow(t,0.5));gl_FragColor=vec4(c,1.0);}'
-  });
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(130,32,16),sm));
-  var sp=[];
-  for(var i=0;i<500;i++){var phi=Math.acos(2*Math.random()-1),th=Math.random()*6.28,r=120;sp.push(r*Math.sin(phi)*Math.cos(th),Math.abs(r*Math.cos(phi))+5,r*Math.sin(phi)*Math.sin(th));}
-  var sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
-  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:0.4,transparent:true,opacity:0.8})));
-}());
+// LIGHTING
+scene.add(new THREE.AmbientLight(0x111133,0.6));
+var moon=new THREE.DirectionalLight(0x2233aa,0.4);
+moon.position.set(-15,25,-10);
+moon.castShadow=true;
+moon.shadow.mapSize.width=moon.shadow.mapSize.height=1024;
+moon.shadow.camera.near=1;moon.shadow.camera.far=70;
+moon.shadow.camera.left=moon.shadow.camera.bottom=-35;
+moon.shadow.camera.right=moon.shadow.camera.top=35;
+scene.add(moon);
+var flash=new THREE.SpotLight(0xffffcc,4,22,Math.PI/7,0.25,1.8);
+var flashTgt=new THREE.Object3D();scene.add(flashTgt);flash.target=flashTgt;scene.add(flash);
+// Уличные фонари
+[[-12,12],[12,12],[-12,-12],[12,-12],[0,20],[0,-20]].forEach(function(lp){
+  var pt=new THREE.PointLight(0xff4400,0.8,10);pt.position.set(lp[0],4,lp[1]);scene.add(pt);
+  var pole=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,4,6),new THREE.MeshLambertMaterial({color:0x222222}));
+  pole.position.set(lp[0],2,lp[1]);scene.add(pole);
+});
 
 // GROUND
-var gg=new THREE.PlaneGeometry(MAP,MAP,50,50);
-var gp=gg.attributes.position;
-for(var i=0;i<gp.count;i++){var x=gp.getX(i),z=gp.getY(i);if(Math.sqrt(x*x+z*z)>5)gp.setZ(i,Math.sin(x*0.4)*Math.cos(z*0.4)*0.3+(Math.random()-0.5)*0.1);}
-gg.computeVertexNormals();
-var gnd=new THREE.Mesh(gg,new THREE.MeshLambertMaterial({color:0x1a2d0d}));
+var gnd=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshLambertMaterial({color:0x0e0e0e}));
 gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+// Разметка
+function addLine(x,z,w,d){
+  var m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({color:0x2a2a2a}));
+  m.rotation.x=-Math.PI/2;m.position.set(x,0.01,z);scene.add(m);
+}
+for(var li=-4;li<=4;li++){addLine(0,li*4,0.2,2.5);addLine(li*4,0,2.5,0.2);}
 
-// ROCKS
-for(var ri=0;ri<12;ri++){
-  var rs=0.3+Math.random()*0.8;
-  var rk=new THREE.Mesh(new THREE.DodecahedronGeometry(rs,0),new THREE.MeshPhongMaterial({color:0x444455}));
-  var rx,rz;do{rx=(Math.random()-0.5)*40;rz=(Math.random()-0.5)*40;}while(Math.sqrt(rx*rx+rz*rz)<6);
-  rk.position.set(rx,rs*0.35,rz);rk.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);rk.castShadow=true;scene.add(rk);
+// BUILDINGS
+var bldData=[];
+function mkBld(x,z,w,d,h,col){
+  var mat=new THREE.MeshLambertMaterial({color:col||0x151520});
+  var mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  mesh.position.set(x,h/2,z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
+  // Окна
+  var wm=new THREE.MeshBasicMaterial({color:0x221100});
+  for(var wi=0;wi<Math.floor(w)*2;wi++){
+    var wn=new THREE.Mesh(new THREE.PlaneGeometry(0.45,0.45),wm.clone());
+    wn.material.color.setHex(Math.random()>.5?0x331500:0x000000);
+    wn.position.set(x+(Math.random()-.5)*(w-.7),Math.random()*(h-1)+0.5,z+d/2+0.01);
+    scene.add(wn);
+  }
+  bldData.push({x:x,z:z,hw:w/2+0.4,hd:d/2+0.4});
+}
+[[-15,28,10,6,8],[-3,28,8,6,10],[9,28,8,6,7],
+ [-15,-28,10,6,9],[-3,-28,8,6,11],[9,-28,8,6,8],
+ [-28,14,6,10,7],[-28,2,6,8,9],[-28,-13,6,10,8],
+ [28,14,6,10,8],[28,2,6,8,7],[28,-13,6,10,10],
+ [-13,10,5,4,4,0x111118],[-13,-10,5,4,3,0x111118],
+ [13,10,5,4,5,0x111118],[13,-10,5,4,4,0x111118],
+ [0,14,4,5,3,0x110f0f],[0,-14,4,5,4,0x110f0f]
+].forEach(function(b){mkBld(b[0],b[1],b[2],b[3],b[4],b[5]);});
+// Мусор
+for(var di=0;di<25;di++){
+  var db=new THREE.Mesh(new THREE.BoxGeometry(.3+Math.random()*.6,.05+Math.random()*.35,.3+Math.random()*.6),new THREE.MeshLambertMaterial({color:0x1a1a1a}));
+  var da=Math.random()*Math.PI*2,dd=6+Math.random()*18;
+  db.position.set(Math.cos(da)*dd,0.08,Math.sin(da)*dd);db.rotation.y=Math.random()*Math.PI;scene.add(db);
 }
 
-// TREES
-var tM=new THREE.MeshLambertMaterial({color:0x3a1e0a});
-var pM=[new THREE.MeshLambertMaterial({color:0x0c3d14}),new THREE.MeshLambertMaterial({color:0x0a2e10}),new THREE.MeshLambertMaterial({color:0x0e4e1a})];
-var trees=[];
-function mkTree(x,z,s){
-  var g=new THREE.Group();g.position.set(x,0,z);
-  var th=(1.8+Math.random()*1.0)*s;
-  var tr=new THREE.Mesh(new THREE.CylinderGeometry(0.13*s,0.25*s,th,7),tM);tr.position.y=th/2;tr.castShadow=true;g.add(tr);
-  for(var i=0;i<3;i++){var ch=(3.8-i*0.5)*s,cr=(1.9-i*0.3)*s;var cn=new THREE.Mesh(new THREE.ConeGeometry(cr,ch,8),pM[i]);cn.position.y=th+i*1.5*s+ch/2-0.4*s;cn.castShadow=true;g.add(cn);}
-  g.userData={broken:false,fa:0,fd:new THREE.Vector2(Math.random()-0.5,Math.random()-0.5).normalize(),r:0.45*s};
-  scene.add(g);trees.push(g);
-}
-for(var ti=0;ti<60;ti++){var tx,tz;do{tx=(Math.random()-0.5)*41;tz=(Math.random()-0.5)*41;}while(Math.sqrt(tx*tx+tz*tz)<7);mkTree(tx,tz,0.8+Math.random()*0.6);}
+// RAIN
+var RCNT=900,rPos=new Float32Array(RCNT*3),rSpd=new Float32Array(RCNT);
+for(var ri=0;ri<RCNT;ri++){rPos[ri*3]=(Math.random()-.5)*60;rPos[ri*3+1]=Math.random()*20;rPos[ri*3+2]=(Math.random()-.5)*60;rSpd[ri]=8+Math.random()*5;}
+var rGeo=new THREE.BufferGeometry();rGeo.setAttribute('position',new THREE.BufferAttribute(rPos,3));
+var rain=new THREE.Points(rGeo,new THREE.PointsMaterial({color:0x4488bb,size:0.07,transparent:true,opacity:0.45}));
+scene.add(rain);
 
-// TRUCK MATERIALS
-var bMat=new THREE.MeshPhongMaterial({color:0x1c3d72,shininess:80});
-var cMat=new THREE.MeshPhongMaterial({color:0x112244,shininess:60});
-var wMat=new THREE.MeshPhongMaterial({color:0x111111,shininess:25});
-var rMat=new THREE.MeshPhongMaterial({color:0x888888,shininess:120});
-var crMat=new THREE.MeshPhongMaterial({color:0xaaaaaa,shininess:180});
-var truck=new THREE.Group();
-var wSpin=[],wSteer=[];
-
+// PLAYER
+var PL_SPD=6,PL_HP=100,PL_AMMO=30,PL_MAX_AMMO=60,SHOOT_CD=0.22;
+var plPos=new THREE.Vector3(0,0,0),plAngle=0,plHP=100,plAmmo=30,plSCD=0,plICD=0;
+var plGroup=new THREE.Group();
 (function(){
-  function bx(mat,w,h,d,px,py,pz){var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(px,py,pz);m.castShadow=true;truck.add(m);}
-  bx(new THREE.MeshPhongMaterial({color:0x222222}),2.6,0.4,4.4,0,1.8,0);
-  bx(bMat,2.55,0.8,4.2,0,2.12,0);
-  var hd=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.5,1.2),bMat);hd.position.set(0,2.38,-1.8);hd.rotation.x=-0.16;hd.castShadow=true;truck.add(hd);
-  bx(cMat,2.0,1.0,2.2,0,3.02,0.2);
-  var ws=new THREE.Mesh(new THREE.BoxGeometry(1.85,0.55,0.05),new THREE.MeshPhongMaterial({color:0x334466,transparent:true,opacity:0.6}));ws.position.set(0,3.1,-0.84);truck.add(ws);
-  bx(crMat,2.65,0.35,0.25,0,1.65,-2.4);
-  var hm=new THREE.MeshPhongMaterial({color:0xffffaa,emissive:0xffee66});
-  [-0.68,0.68].forEach(function(hx){var h=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.26,0.08),hm);h.position.set(hx,1.86,-2.42);truck.add(h);var pl=new THREE.PointLight(0xffeeaa,1.8,12);pl.position.set(hx,1.82,-3.1);truck.add(pl);});
-  var tm=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xcc0000});
-  [-0.68,0.68].forEach(function(tx){var t=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.2,0.07),tm);t.position.set(tx,2.08,2.42);truck.add(t);});
-  [-0.65,0.65].forEach(function(ex){var p=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,1.1,8),crMat);p.position.set(ex*1.4,2.85,-0.5);p.rotation.x=-0.18;truck.add(p);});
-  bx(crMat,1.7,0.1,0.1,0,3.6,0.2);
-  [{x:-1.58,y:1.08,z:1.5,f:true},{x:1.58,y:1.08,z:1.5,f:true},{x:-1.58,y:1.08,z:-1.5,f:false},{x:1.58,y:1.08,z:-1.5,f:false}].forEach(function(w){
-    var piv=new THREE.Group();piv.position.set(w.x,w.y,w.z);truck.add(piv);
-    var sp=new THREE.Group();piv.add(sp);
-    var ti=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,0.68,16),wMat);ti.rotation.z=Math.PI/2;ti.castShadow=true;sp.add(ti);
-    var ri=new THREE.Mesh(new THREE.CylinderGeometry(0.54,0.54,0.70,10),rMat);ri.rotation.z=Math.PI/2;sp.add(ri);
-    for(var s=0;s<5;s++){var sk=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.72,0.07),new THREE.MeshPhongMaterial({color:0x555555}));sk.rotation.set(0,0,s*Math.PI/5*2);sp.add(sk);}
-    var ar=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.12,0.85),new THREE.MeshPhongMaterial({color:0x333333}));ar.position.set(w.x<0?0.35:-0.35,0,0);piv.add(ar);
-    wSpin.push(sp);if(w.f)wSteer.push(piv);
-  });
+  var bm=new THREE.MeshLambertMaterial({color:0x334455}),hm=new THREE.MeshLambertMaterial({color:0x885533}),gm=new THREE.MeshLambertMaterial({color:0x222222});
+  var body=new THREE.Mesh(new THREE.BoxGeometry(.6,.8,.35),bm);body.position.y=.8;body.castShadow=true;plGroup.add(body);
+  var head=new THREE.Mesh(new THREE.BoxGeometry(.38,.38,.38),hm);head.position.y=1.5;head.castShadow=true;plGroup.add(head);
+  [-.15,.15].forEach(function(lx){var leg=new THREE.Mesh(new THREE.BoxGeometry(.22,.55,.22),bm);leg.position.set(lx,.28,0);plGroup.add(leg);});
+  var gun=new THREE.Mesh(new THREE.BoxGeometry(.07,.1,.42),gm);gun.position.set(.33,.88,-.22);plGroup.add(gun);
 }());
-scene.add(truck);
+scene.add(plGroup);
 
-// CAR PHYSICS
-var cPos=new THREE.Vector3(0,0,0),cAngle=0,cSpeed=0,cSteer=0;
-var cHP=100,cScore=0,cKills=0,cDead=false,dFlash=0,dCD=0;
-var ACC=12,BRK=18,MXF=15,MXR=6,FRC=0.92,SMX=0.55,SSPD=2.5,WB=3.0;
+// ENEMY TYPES
+var ETYPES={
+  walker:{color:0x2d5a2d,hp:40,spd:1.8,dmg:8,sc:10,sz:1.0},
+  runner:{color:0x8a8a10,hp:20,spd:4.5,dmg:5,sc:15,sz:.85},
+  brute: {color:0x7a2200,hp:150,spd:1.2,dmg:15,sc:30,sz:1.5},
+  boss:  {color:0xcc0000,hp:800,spd:2.2,dmg:25,sc:200,sz:2.5}
+};
+var enemies=[],bullets=[],pickups=[],parts=[],bloodDecals=[];
+
+function mkEnemyMesh(type){
+  var g=new THREE.Group(),td=ETYPES[type],s=td.sz;
+  var mat=new THREE.MeshLambertMaterial({color:td.color});
+  var body=new THREE.Mesh(new THREE.BoxGeometry(.6*s,.8*s,.35*s),mat);body.position.y=.8*s;body.castShadow=true;g.add(body);
+  var head=new THREE.Mesh(new THREE.BoxGeometry(.4*s,.4*s,.4*s),mat);head.position.y=1.45*s;head.castShadow=true;g.add(head);
+  var eyeM=new THREE.MeshBasicMaterial({color:type==='boss'?0xffaa00:0xff2200});
+  [-.1*s,.1*s].forEach(function(ex){var e=new THREE.Mesh(new THREE.BoxGeometry(.08*s,.06*s,.04*s),eyeM);e.position.set(ex,1.5*s,.21*s);g.add(e);});
+  [-.15*s,.15*s].forEach(function(lx){var l=new THREE.Mesh(new THREE.BoxGeometry(.22*s,.55*s,.22*s),mat);l.position.set(lx,.28*s,0);g.add(l);});
+  [-.45*s,.45*s].forEach(function(ax,i){var a=new THREE.Mesh(new THREE.BoxGeometry(.2*s,.5*s,.2*s),mat);a.position.set(ax,.9*s,0);a.rotation.z=i===0?.5:-.5;g.add(a);});
+  if(type==='boss'){
+    var hmat=new THREE.MeshLambertMaterial({color:0x440000});
+    [-.2,.2].forEach(function(hx){var h=new THREE.Mesh(new THREE.ConeGeometry(.09,.45,6),hmat);h.position.set(hx,1.95,0);g.add(h);});
+    var bpGeo=new THREE.PlaneGeometry(2.5,.2);
+    var bpMat=new THREE.MeshBasicMaterial({color:0xff0000,side:THREE.DoubleSide});
+    var bp=new THREE.Mesh(bpGeo,bpMat);bp.position.y=3.6;bp.rotation.x=-Math.PI/2;g.add(bp);
+    g.userData.hpBar=bp;g.userData.hpMat=bpMat;
+  }
+  return g;
+}
+
+function spawnEnemy(type,x,z){
+  var td=ETYPES[type],mesh=mkEnemyMesh(type);
+  mesh.position.set(x,0,z);scene.add(mesh);
+  enemies.push({mesh:mesh,type:type,hp:td.hp,maxHp:td.hp,spd:td.spd,dmg:td.dmg,sc:td.sc,alive:true,dmgCD:0,walkT:Math.random()*6.28});
+}
+function getSpawnXZ(){var a=Math.random()*Math.PI*2,d=26+Math.random()*4;return{x:Math.cos(a)*d,z:Math.sin(a)*d};}
+
+// WAVES
+var wActive=false,wQueue=[],wSpawnT=0,wNextT=0,W_SPAWN_INT=1.4,W_BREAK=5;
+function buildQueue(n){
+  var q=[];
+  var w=3+n*2,r=Math.max(0,n-1)*2,b=Math.floor(n/2);
+  for(var i=0;i<w;i++)q.push('walker');
+  for(var i=0;i<r;i++)q.push('runner');
+  for(var i=0;i<b;i++)q.push('brute');
+  for(var i=q.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=q[i];q[i]=q[j];q[j]=t;}
+  if(n%5===0)q.push('boss');
+  return q;
+}
+function startWave(n){
+  wave=n;wQueue=buildQueue(n);wSpawnT=0;wActive=true;
+  waveTxt.textContent='ВОЛНА '+n;waveTxt.style.color=n%5===0?'#ff0000':'#ff3333';
+}
+
+// BULLETS
+var BSPD=18,BDMG=20;
+var bPool=[],bMat=new THREE.MeshBasicMaterial({color:0xffaa00}),bGeo=new THREE.SphereGeometry(.08,4,4);
+function getBullet(){
+  for(var i=0;i<bPool.length;i++)if(!bPool[i].active)return bPool[i];
+  var m=new THREE.Mesh(bGeo,bMat);scene.add(m);
+  var b={mesh:m,vx:0,vz:0,dist:0,active:false};bPool.push(b);return b;
+}
+function fireBullet(x,z,angle){
+  var b=getBullet();b.mesh.position.set(x,.5,z);b.vx=Math.sin(angle)*BSPD;b.vz=Math.cos(angle)*BSPD;b.dist=0;b.active=true;b.mesh.visible=true;
+  playShot();
+}
+
+// PICKUPS
+var pkMats={medkit:new THREE.MeshLambertMaterial({color:0x00cc44}),ammo:new THREE.MeshLambertMaterial({color:0xffaa00})};
+function spawnPickup(type,x,z){
+  var geo=type==='medkit'?new THREE.BoxGeometry(.5,.5,.5):new THREE.BoxGeometry(.35,.25,.45);
+  var m=new THREE.Mesh(geo,pkMats[type]);m.position.set(x,.3,z);scene.add(m);
+  pickups.push({mesh:m,type:type,alive:true,bobT:Math.random()*6.28});
+}
+
+// BLOOD
+var bloodM=new THREE.MeshBasicMaterial({color:0x770000,side:THREE.DoubleSide});
+function spawnBlood(x,z,n){
+  for(var i=0;i<n;i++){
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(.1+Math.random()*.15,.1+Math.random()*.15),bloodM.clone());
+    m.rotation.x=-Math.PI/2;m.position.set(x+(Math.random()-.5)*.8,.01,z+(Math.random()-.5)*.8);scene.add(m);
+    bloodDecals.push({mesh:m,life:12});
+  }
+  for(var i=0;i<5;i++){
+    var pm=new THREE.Mesh(new THREE.SphereGeometry(.04,4,4),new THREE.MeshBasicMaterial({color:0xaa0000}));
+    pm.position.set(x,.3,z);
+    parts.push({mesh:pm,vx:(Math.random()-.5)*5,vy:Math.random()*3+1,vz:(Math.random()-.5)*5,life:.5});
+    scene.add(pm);
+  }
+}
+
+// AUDIO
+var audioCtx=null;
+function initAudio(){if(audioCtx)return;try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();startMusic();}catch(e){}}
+function playShot(){
+  if(!audioCtx)return;var t=audioCtx.currentTime;
+  var o=audioCtx.createOscillator(),g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();
+  f.type='highpass';f.frequency.value=200;o.type='sawtooth';
+  o.frequency.setValueAtTime(200,t);o.frequency.exponentialRampToValueAtTime(40,t+.1);
+  g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);
+  o.connect(f);f.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.12);
+}
+function playHit(){
+  if(!audioCtx)return;var t=audioCtx.currentTime;
+  var b=audioCtx.createBuffer(1,audioCtx.sampleRate*.05,audioCtx.sampleRate),d=b.getChannelData(0);
+  for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+  var s=audioCtx.createBufferSource(),g=audioCtx.createGain();s.buffer=b;
+  g.gain.setValueAtTime(.2,t);s.connect(g);g.connect(audioCtx.destination);s.start(t);
+}
+function playPickup(){
+  if(!audioCtx)return;var t=audioCtx.currentTime;
+  var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.frequency.setValueAtTime(400,t);o.frequency.setValueAtTime(600,t+.05);o.frequency.setValueAtTime(800,t+.1);
+  g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);
+  o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.2);
+}
+function playHurt(){
+  if(!audioCtx)return;var t=audioCtx.currentTime;
+  var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';
+  o.frequency.setValueAtTime(110,t);o.frequency.exponentialRampToValueAtTime(55,t+.18);
+  g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);
+  o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.2);
+}
+function startMusic(){
+  if(!audioCtx)return;var t=audioCtx.currentTime+.1;
+  function bar(){
+    var notes=[{f:60,s:0,d:.35},{f:0,s:.5},{f:80,s:1,d:.3},{f:0,s:1.5},{f:60,s:2,d:.35},{f:0,s:2.5},{f:70,s:3,d:.3},{f:55,s:3.5,d:.2}];
+    notes.forEach(function(n){if(!n.f)return;var o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=n.f;var nt=t+n.s*.5;g.gain.setValueAtTime(.05,nt);g.gain.exponentialRampToValueAtTime(.001,nt+n.d);o.connect(g);g.connect(audioCtx.destination);o.start(nt);o.stop(nt+n.d);});
+    t+=4*.5;setTimeout(bar,Math.max(0,(t-audioCtx.currentTime-.1)*1000));
+  }
+  bar();
+}
 
 // INPUT
 var keys={};
 window.addEventListener('keydown',function(e){keys[e.code]=true;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code)!==-1)e.preventDefault();});
 window.addEventListener('keyup',function(e){keys[e.code]=false;});
+var mouseDown=false;
+window.addEventListener('mousemove',function(e){mNDC.x=(e.clientX/W)*2-1;mNDC.y=-(e.clientY/H)*2+1;});
+window.addEventListener('mousedown',function(e){if(e.button===0){mouseDown=true;initAudio();}});
+window.addEventListener('mouseup',function(e){if(e.button===0)mouseDown=false;});
 
-// ZOMBIE MODEL
-function mkZombie(){
-  var g=new THREE.Group();
-  var sk=new THREE.MeshLambertMaterial({color:0x4a7a35}),dk=new THREE.MeshLambertMaterial({color:0x2d4a20}),cl=new THREE.MeshLambertMaterial({color:0x3d2810}),ey=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xdd0000});
-  function b(m,w,h,d,px,py,pz){var ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);ms.position.set(px,py,pz);ms.castShadow=true;g.add(ms);}
-  b(cl,0.21,0.58,0.21,-0.14,0.33,0);b(cl,0.21,0.58,0.21,0.14,0.33,0);
-  b(dk,0.19,0.11,0.28,-0.14,0.05,0.03);b(dk,0.19,0.11,0.28,0.14,0.05,0.03);
-  b(cl,0.50,0.65,0.28,0,1.0,0);b(sk,0.34,0.34,0.34,0,1.64,0);
-  b(ey,0.07,0.06,0.04,-0.09,1.69,0.17);b(ey,0.07,0.06,0.04,0.09,1.69,0.17);
-  b(new THREE.MeshLambertMaterial({color:0x1a0000}),0.16,0.06,0.04,0,1.56,0.17);
-  var aL=new THREE.Mesh(new THREE.BoxGeometry(0.19,0.50,0.19),sk);aL.position.set(-0.37,1.05,-0.05);aL.rotation.set(-0.3,0,0.45);g.add(aL);
-  var aR=new THREE.Mesh(new THREE.BoxGeometry(0.19,0.50,0.19),sk);aR.position.set(0.37,1.05,-0.05);aR.rotation.set(-0.3,0,-0.45);g.add(aR);
-  g.userData.wp=Math.random()*6.28;return g;
-}
+// HELPERS
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function collideBld(x,z){for(var i=0;i<bldData.length;i++){var b=bldData[i];if(Math.abs(x-b.x)<b.hw&&Math.abs(z-b.z)<b.hd)return true;}return false;}
 
-// ROBOT MODEL
-function mkRobot(){
-  var g=new THREE.Group();
-  var mt=new THREE.MeshPhongMaterial({color:0x6a6a82,shininess:110}),dk=new THREE.MeshPhongMaterial({color:0x383848,shininess:70}),ey=new THREE.MeshPhongMaterial({color:0xff2200,emissive:0xff1100}),gl=new THREE.MeshPhongMaterial({color:0x66aaff,emissive:0x1133aa});
-  function b(m,w,h,d,px,py,pz){var ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);ms.position.set(px,py,pz);ms.castShadow=true;g.add(ms);}
-  b(mt,0.21,0.36,0.21,-0.17,0.54,0);b(dk,0.19,0.32,0.19,-0.17,0.19,0);b(mt,0.24,0.12,0.32,-0.17,0.04,0.05);
-  b(mt,0.21,0.36,0.21,0.17,0.54,0);b(dk,0.19,0.32,0.19,0.17,0.19,0);b(mt,0.24,0.12,0.32,0.17,0.04,0.05);
-  b(dk,0.50,0.20,0.28,0,0.76,0);b(mt,0.58,0.68,0.34,0,1.18,0);b(gl,0.32,0.09,0.04,0,1.25,0.18);
-  b(mt,0.20,0.20,0.40,-0.42,1.40,0);b(mt,0.20,0.20,0.40,0.42,1.40,0);
-  b(mt,0.18,0.40,0.18,-0.44,1.04,0);b(dk,0.16,0.34,0.16,-0.44,0.73,0);b(mt,0.22,0.22,0.22,-0.44,0.52,0);
-  b(mt,0.18,0.40,0.18,0.44,1.04,0);b(dk,0.16,0.34,0.16,0.44,0.73,0);b(mt,0.22,0.22,0.22,0.44,0.52,0);
-  var nk=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.13,0.18,8),dk);nk.position.y=1.60;g.add(nk);
-  b(mt,0.46,0.40,0.40,0,1.88,0);b(ey,0.09,0.06,0.05,-0.10,1.91,0.21);b(ey,0.09,0.06,0.05,0.10,1.91,0.21);
-  var an=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.28,6),dk);an.position.set(0.13,2.24,0);g.add(an);
-  g.userData.wp=Math.random()*6.28;return g;
-}
-
-// ENEMIES
-var enemies=[],spTimer=0;
-function spawnEnemy(type){
-  var x,z;do{x=(Math.random()-0.5)*40;z=(Math.random()-0.5)*40;}while(Math.sqrt((x-cPos.x)*(x-cPos.x)+(z-cPos.z)*(z-cPos.z))<8);
-  var m=type==='zombie'?mkZombie():mkRobot();m.position.set(x,0,z);scene.add(m);
-  enemies.push({mesh:m,type:type,hp:type==='zombie'?30:55,alive:true,dying:false,dt:0,at:0,spd:type==='zombie'?1.6+Math.random()*0.8:2.0+Math.random()*0.9});
-}
-for(var i=0;i<10;i++) spawnEnemy(i%2===0?'zombie':'robot');
-
-// PARTICLES
-var parts=[];
-function boom(pos,col,n){
-  for(var i=0;i<n;i++){
-    var pm=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.12),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:1}));
-    pm.position.set(pos.x,pos.y+1,pos.z);
-    var pv=new THREE.Vector3((Math.random()-0.5)*5,Math.random()*4+1,(Math.random()-0.5)*5);
-    scene.add(pm);parts.push({m:pm,v:pv,l:1.0});
-  }
+// MINIMAP
+function drawMM(){
+  var s=120/60;
+  mmCtx.fillStyle='#080808';mmCtx.fillRect(0,0,120,120);
+  mmCtx.fillStyle='#1a1a28';
+  bldData.forEach(function(b){mmCtx.fillRect((b.x-b.hw+30)*s,(b.z-b.hd+30)*s,b.hw*2*s,b.hd*2*s);});
+  mmCtx.fillStyle='#00cc44';
+  pickups.forEach(function(p){if(!p.alive)return;mmCtx.fillRect((p.mesh.position.x+30)*s-2,(p.mesh.position.z+30)*s-2,4,4);});
+  mmCtx.fillStyle='#ff2200';
+  enemies.forEach(function(e){if(!e.alive)return;var ex=(e.mesh.position.x+30)*s,ez=(e.mesh.position.z+30)*s;mmCtx.fillRect(ex-2,ez-2,4,4);});
+  var px=(plPos.x+30)*s,pz=(plPos.z+30)*s;
+  mmCtx.fillStyle='#ffffff';mmCtx.fillRect(px-3,pz-3,6,6);
+  mmCtx.strokeStyle='#440000';mmCtx.strokeRect(0,0,120,120);
 }
 
 // KILL ENEMY
-function killEnemy(e){
-  if(!e.alive)return;
-  e.alive=false;e.dying=true;e.dt=0;
-  boom(e.mesh.position,e.type==='zombie'?0x8B0000:0xaaaaaa,e.type==='zombie'?10:12);
-  cScore+=e.type==='zombie'?100:150;cKills++;updateHUD();
+function killEnemy(i){
+  var e=enemies[i];if(!e.alive)return;e.alive=false;scene.remove(e.mesh);
+  spawnBlood(e.mesh.position.x,e.mesh.position.z,6);
+  score+=e.sc;
+  if(Math.random()<.28){spawnPickup(Math.random()<.5?'medkit':'ammo',e.mesh.position.x+(Math.random()-.5)*1.5,e.mesh.position.z+(Math.random()-.5)*1.5);}
 }
 
-// HUD
-var hpBar=document.getElementById('hp-bar'),hpTxt=document.getElementById('hp-txt');
-var scTxt=document.getElementById('sc-txt'),klTxt=document.getElementById('kl-txt'),enTxt=document.getElementById('en-txt');
-var over=document.getElementById('over');
-function updateHUD(){
-  var p=Math.max(0,cHP);hpBar.style.width=p+'%';
-  hpBar.style.background=p>60?'linear-gradient(90deg,#4caf50,#8bc34a)':p>30?'linear-gradient(90deg,#ff9800,#ffc107)':'linear-gradient(90deg,#e63946,#ff5252)';
-  hpTxt.textContent=Math.max(0,Math.ceil(cHP))+' / 100';
-  scTxt.textContent='\u2605 \u041e\u0447\u043a\u0438: '+cScore;
-  klTxt.textContent='\u0423\u0431\u0438\u0442\u043e: '+cKills;
-  var a=0;for(var i=0;i<enemies.length;i++)if(enemies[i].alive)a++;
-  enTxt.textContent='\u0412\u0440\u0430\u0433\u0438: '+a;
+// GAME START/OVER
+function startGame(){
+  initAudio();
+  plHP=PL_HP;plAmmo=PL_AMMO;plPos.set(0,0,0);plAngle=0;plSCD=0;plICD=0;score=0;wave=1;gameTime=0;
+  enemies.forEach(function(e){scene.remove(e.mesh);});enemies.length=0;
+  bPool.forEach(function(b){b.active=false;b.mesh.visible=false;});
+  pickups.forEach(function(p){scene.remove(p.mesh);});pickups.length=0;
+  parts.forEach(function(p){scene.remove(p.mesh);});parts.length=0;
+  bloodDecals.forEach(function(d){scene.remove(d.mesh);});bloodDecals.length=0;
+  screenEl.style.display='none';hudEl.style.display='flex';mmWrap.style.display='block';crossEl.style.display='block';
+  STATE='playing';clock.start();wNextT=0;startWave(1);
 }
-function showOver(){
-  document.getElementById('res').textContent='\u041e\u0447\u043a\u0438: '+cScore+'   |   \u0423\u0431\u0438\u0442\u043e: '+cKills;
-  over.style.display='flex';
+function gameOver(){
+  STATE='gameover';
+  if(score>highScore){highScore=score;localStorage.setItem('ze3d_hs',highScore);}
+  hsVal.textContent=highScore;
+  document.getElementById('screen-title')||0;
+  document.querySelector('#screen h1').textContent='КОНЕЦ';
+  document.querySelector('#screen h2').textContent='ИГРА ОКОНЧЕНА';
+  document.querySelector('.story').innerHTML='Волна: '+wave+'<br>Счёт: '+score+'<br>Рекорд: '+highScore;
+  document.getElementById('mainbtn').textContent='↺ СНОВА';
+  document.getElementById('mainbtn').onclick=startGame;
+  screenEl.style.display='flex';hudEl.style.display='none';mmWrap.style.display='none';crossEl.style.display='none';
 }
 
 // MAIN LOOP
-var camTgt=new THREE.Vector3(),clock=new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
-  var dt=Math.min(clock.getDelta(),0.05);
-  if(cDead){renderer.render(scene,cam);return;}
+  var dt=Math.min(clock.getDelta(),.05);
+  if(STATE!=='playing'){renderer.render(scene,camera);return;}
+  gameTime+=dt;
 
-  var gas=keys.KeyW||keys.ArrowUp,rev=keys.KeyS||keys.ArrowDown;
-  var goL=keys.KeyA||keys.ArrowLeft,goR=keys.KeyD||keys.ArrowRight,eb=keys.Space;
-  cSteer+=(( goL?SMX:goR?-SMX:0)-cSteer)*SSPD*dt;
-  if(gas)cSpeed=Math.min(cSpeed+ACC*dt,MXF);
-  else if(rev){if(cSpeed>0.2)cSpeed-=BRK*dt;else cSpeed=Math.max(cSpeed-ACC*0.5*dt,-MXR);}
-  else if(eb)cSpeed*=Math.pow(0.3,dt*6);
-  else{cSpeed*=Math.pow(FRC,dt*60);if(Math.abs(cSpeed)<0.03)cSpeed=0;}
-  if(Math.abs(cSpeed)>0.05)cAngle+=(cSpeed/WB)*Math.sin(cSteer)*2.3*dt;
-  cPos.x+=Math.sin(cAngle)*cSpeed*dt;cPos.z+=Math.cos(cAngle)*cSpeed*dt;
-  var B=HALF-1.5;
-  if(cPos.x<-B){cPos.x=-B;cSpeed*=-0.3;}if(cPos.x>B){cPos.x=B;cSpeed*=-0.3;}
-  if(cPos.z<-B){cPos.z=-B;cSpeed*=-0.3;}if(cPos.z>B){cPos.z=B;cSpeed*=-0.3;}
-  truck.position.set(cPos.x,0,cPos.z);truck.rotation.y=cAngle;
-  var ws=cSpeed*dt*1.1;
-  for(var i=0;i<wSpin.length;i++)wSpin[i].rotation.y+=ws;
-  for(var i=0;i<wSteer.length;i++)wSteer[i].rotation.y=cSteer*0.65;
+  // Мышь -> мир
+  RC.setFromCamera(mNDC,camera);
+  var mhit=RC.ray.intersectPlane(gPlane,mWorld);
 
-  // Trees
-  for(var i=0;i<trees.length;i++){
-    var t=trees[i];
-    if(t.userData.broken){if(t.userData.fa<Math.PI/2){t.userData.fa+=dt*2.0;var fa=Math.min(t.userData.fa,Math.PI/2);var fd=t.userData.fd;t.rotation.x=fd.y*fa;t.rotation.z=-fd.x*fa;}continue;}
-    var dx=t.position.x-cPos.x,dz=t.position.z-cPos.z,d2=dx*dx+dz*dz,R=t.userData.r+1.4;
-    if(d2<R*R){t.userData.broken=true;var m=Math.sqrt(d2)||1;t.userData.fd.set(dx/m,dz/m);cSpeed*=0.5;boom(t.position,0x3a1e0a,5);}
+  // Движение игрока
+  var mx=0,mz=0;
+  if(keys.KeyW||keys.ArrowUp)mz-=1;if(keys.KeyS||keys.ArrowDown)mz+=1;
+  if(keys.KeyA||keys.ArrowLeft)mx-=1;if(keys.KeyD||keys.ArrowRight)mx+=1;
+  if(mx||mz){var ml=Math.sqrt(mx*mx+mz*mz);mx/=ml;mz/=ml;
+    var nx=clamp(plPos.x+mx*PL_SPD*dt,-27,27),nz=clamp(plPos.z+mz*PL_SPD*dt,-27,27);
+    if(!collideBld(nx,plPos.z))plPos.x=nx;if(!collideBld(plPos.x,nz))plPos.z=nz;
+  }
+  if(mhit){var dx=mWorld.x-plPos.x,dz=mWorld.z-plPos.z;if(dx*dx+dz*dz>.01)plAngle=Math.atan2(dx,dz);}
+  plGroup.position.set(plPos.x,0,plPos.z);plGroup.rotation.y=plAngle;
+
+  // Фонарик
+  flash.position.set(plPos.x,3,plPos.z);
+  flashTgt.position.set(plPos.x+Math.sin(plAngle)*14,0,plPos.z+Math.cos(plAngle)*14);
+
+  // Стрельба
+  plSCD=Math.max(0,plSCD-dt);
+  if(mouseDown&&plSCD<=0&&plAmmo>0){fireBullet(plPos.x,plPos.z,plAngle);plAmmo--;plSCD=SHOOT_CD;}
+
+  // Пули
+  bPool.forEach(function(b){
+    if(!b.active)return;
+    b.mesh.position.x+=b.vx*dt;b.mesh.position.z+=b.vz*dt;
+    b.dist+=Math.sqrt(b.vx*b.vx+b.vz*b.vz)*dt;
+    var bx=b.mesh.position.x,bz=b.mesh.position.z,hit=false;
+    for(var i=0;i<enemies.length&&!hit;i++){
+      var e=enemies[i];if(!e.alive)continue;
+      var ex=e.mesh.position.x,ez=e.mesh.position.z,r=.6*ETYPES[e.type].sz;
+      if(Math.abs(bx-ex)<r&&Math.abs(bz-ez)<r){e.hp-=BDMG;playHit();spawnBlood(ex,ez,3);if(e.hp<=0)killEnemy(i);hit=true;}
+    }
+    if(!hit&&collideBld(bx,bz))hit=true;
+    if(hit||b.dist>22){b.active=false;b.mesh.visible=false;}
+  });
+
+  // Неуязвимость
+  plICD=Math.max(0,plICD-dt);
+
+  // Враги
+  enemies.forEach(function(e){
+    if(!e.alive)return;
+    var ex=e.mesh.position.x,ez=e.mesh.position.z;
+    var dx=plPos.x-ex,dz=plPos.z-ez,dist=Math.sqrt(dx*dx+dz*dz);
+    if(dist>.5){
+      var nx=ex+(dx/dist)*e.spd*dt,nz=ez+(dz/dist)*e.spd*dt;
+      if(!collideBld(nx,ez))e.mesh.position.x=nx;if(!collideBld(ex,nz))e.mesh.position.z=nz;
+      e.mesh.rotation.y=Math.atan2(dx,dz);
+    }
+    e.walkT+=dt*e.spd*2;e.mesh.position.y=Math.abs(Math.sin(e.walkT))*.1*ETYPES[e.type].sz;
+    if(dist<.8*ETYPES[e.type].sz+.5){
+      e.dmgCD=Math.max(0,e.dmgCD-dt);
+      if(e.dmgCD<=0&&plICD<=0){plHP-=e.dmg;plICD=.3;playHurt();e.dmgCD=1.0;
+        dmgFlash.style.background='rgba(200,0,0,0.35)';setTimeout(function(){dmgFlash.style.background='rgba(200,0,0,0)';},80);
+        if(plHP<=0){gameOver();return;}
+      }
+    }
+    if(e.type==='boss'&&e.mesh.userData.hpBar){
+      var pct=e.hp/ETYPES.boss.hp;e.mesh.userData.hpBar.scale.x=Math.max(0,pct);
+      e.mesh.userData.hpMat.color.setHex(pct>.5?0xff4400:0xff0000);
+    }
+  });
+
+  // Волны
+  if(wActive){
+    if(wQueue.length>0){wSpawnT-=dt;if(wSpawnT<=0){var sp=getSpawnXZ();spawnEnemy(wQueue.pop(),sp.x,sp.z);wSpawnT=W_SPAWN_INT;}}
+    else{var ac=0;enemies.forEach(function(e){if(e.alive)ac++;});if(ac===0){wActive=false;wNextT=W_BREAK;}}
+  } else if(wNextT>0){
+    wNextT-=dt;waveTxt.textContent='СЛЕД. ВОЛНА: '+Math.ceil(wNextT)+'с';
+    if(wNextT<=0)startWave(wave+1);
   }
 
-  // Enemies
-  spTimer+=dt;var alive=0;
-  for(var i=0;i<enemies.length;i++)if(enemies[i].alive)alive++;
-  if(spTimer>4.5&&alive<20){spTimer=0;spawnEnemy(Math.random()<0.5?'zombie':'robot');if(alive<10)spawnEnemy(Math.random()<0.5?'zombie':'robot');}
-  dCD=Math.max(0,dCD-dt);
-  for(var i=0;i<enemies.length;i++){
-    var e=enemies[i];
-    if(!e.alive){if(e.dying){e.dt+=dt;e.mesh.position.y-=dt*1.0;e.mesh.rotation.z+=dt*2.5;if(e.dt>1.5){scene.remove(e.mesh);e.dying=false;}}continue;}
-    var dx=cPos.x-e.mesh.position.x,dz=cPos.z-e.mesh.position.z,dist=Math.sqrt(dx*dx+dz*dz);
-    if(dist>0.3){e.mesh.position.x+=(dx/dist)*e.spd*dt;e.mesh.position.z+=(dz/dist)*e.spd*dt;e.mesh.rotation.y=Math.atan2(dx,dz);}
-    e.mesh.userData.wp+=dt*e.spd*3.5;e.mesh.position.y=Math.abs(Math.sin(e.mesh.userData.wp))*0.08;e.mesh.rotation.x=0.1;
-    if(dist<2.1){e.at+=dt;if(e.at>=1.0&&dCD<=0){cHP-=5;e.at=0;dCD=0.25;dFlash=0.2;updateHUD();if(cHP<=0){cDead=true;showOver();return;}}}else{e.at=0;}
-    if(dist<2.3&&Math.abs(cSpeed)>3.0){e.hp-=Math.abs(cSpeed)*3.5*dt;if(e.hp<=0)killEnemy(e);}
+  // Подбираемые предметы
+  pickups.forEach(function(p){
+    if(!p.alive)return;
+    p.bobT+=dt*2;p.mesh.position.y=.3+Math.sin(p.bobT)*.1;p.mesh.rotation.y+=dt*1.5;
+    var dx=plPos.x-p.mesh.position.x,dz=plPos.z-p.mesh.position.z;
+    if(dx*dx+dz*dz<1.4){
+      if(p.type==='medkit')plHP=Math.min(PL_HP,plHP+30);else plAmmo=Math.min(PL_MAX_AMMO,plAmmo+30);
+      playPickup();scene.remove(p.mesh);p.alive=false;
+    }
+  });
+
+  // Частицы
+  parts.forEach(function(p){
+    if(p.life<=0)return;
+    p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.mesh.position.z+=p.vz*dt;
+    p.vy-=15*dt;p.life-=dt;p.mesh.visible=p.life>0;
+  });
+
+  // Дождь
+  var ra=rGeo.attributes.position.array;
+  for(var ri=0;ri<RCNT;ri++){
+    ra[ri*3+1]-=rSpd[ri]*dt;
+    if(ra[ri*3+1]<0){ra[ri*3]=(Math.random()-.5)*60;ra[ri*3+1]=18+Math.random()*4;ra[ri*3+2]=(Math.random()-.5)*60;}
   }
-  dFlash=Math.max(0,dFlash-dt);bMat.color.setHex(dFlash>0?0xff2200:0x1c3d72);
+  rGeo.attributes.position.needsUpdate=true;
 
-  // Particles
-  for(var i=parts.length-1;i>=0;i--){var p=parts[i];p.v.y-=9.8*dt;p.m.position.x+=p.v.x*dt;p.m.position.y+=p.v.y*dt;p.m.position.z+=p.v.z*dt;p.l-=dt;p.m.material.opacity=Math.max(0,p.l);if(p.l<=0){scene.remove(p.m);parts.splice(i,1);}}
+  // Камера
+  camera.position.x+=(plPos.x-camera.position.x)*4*dt;
+  camera.position.z+=(plPos.z+12-camera.position.z)*4*dt;
+  camera.position.y+=(22-camera.position.y)*4*dt;
+  camera.lookAt(plPos.x,0,plPos.z);
 
-  // Camera
-  var cx=cPos.x-Math.sin(cAngle)*13,cz=cPos.z-Math.cos(cAngle)*13;
-  cam.position.x+=(cx-cam.position.x)*6*dt;cam.position.z+=(cz-cam.position.z)*6*dt;cam.position.y+=(8.5-cam.position.y)*5*dt;
-  camTgt.set(cPos.x,1.5,cPos.z);cam.lookAt(camTgt);
-  updateHUD();renderer.render(scene,cam);
+  // HUD
+  hpFill.style.width=Math.max(0,plHP/PL_HP*100)+'%';
+  hpFill.style.background=plHP>50?'linear-gradient(90deg,#cc0000,#ff4400)':plHP>25?'linear-gradient(90deg,#cc6600,#ffaa00)':'linear-gradient(90deg,#880000,#cc0000)';
+  hpVal.textContent=Math.max(0,Math.ceil(plHP));ammoVal.textContent=plAmmo;
+  scoreTxt.textContent='ОЧКИ: '+score;
+  var alv=0;enemies.forEach(function(e){if(e.alive)alv++;});
+  enCount.textContent='Врагов: '+(alv+wQueue.length);
+  drawMM();
+  renderer.render(scene,camera);
 }
-updateHUD();animate();
+
+animate();
 </script>
+<a href="https://example.com" style="position:fixed;bottom:8px;left:50%;transform:translateX(-50%);color:#ff3333;font-family:'Courier New',monospace;font-size:12px;text-decoration:none;border:1px solid #440000;padding:5px 16px;background:rgba(40,0,0,0.6);z-index:200;letter-spacing:2px">&#9654; ИГРАТЬ</a>
 </body>
 </html>
